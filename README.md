@@ -116,12 +116,19 @@ Located in `/api/` directory, deployed as Vercel Serverless Functions:
 
 **Implementation:**
 - Uses Python's `BaseHTTPRequestHandler` for Vercel serverless compatibility
-- Web scraping with BeautifulSoup4 and Requests
+- Fresh web scraping implementation using BeautifulSoup4 and Requests
+- Analyzes actual Swindon Borough Council website structure
 - Retry logic with exponential backoff (max 30s delay)
 - CORS support for cross-origin requests
 
+**Scraping Approach:**
+- UPRN lookup: Submits postcode via POST form, parses address dropdown from HTML
+- Collection data: Uses POST with query parameters (uprnSubmit=Yes&addressList={uprn})
+- Parses HTML elements: `div.bin-collection-content` for collection items
+- Extracts dates from `span.nextCollectionDate` and types from `div.content-left h3`
+
 **Services:**
-- `api/services/swindon_scraper.py` - Web scraper for Swindon Council website
+- `api/services/swindon_scraper.py` - Web scraper for collection schedules
 - `api/services/uprn_lookup.py` - Address lookup service
 
 ### Frontend (React + TypeScript + Vite)
@@ -259,16 +266,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Attribution
-
-This project adapts scraping code from the excellent [hacs_waste_collection_schedule](https://github.com/mampfes/hacs_waste_collection_schedule) project:
-
-- **Original Author**: Steffen Zimmermann
-- **Original License**: MIT License (Copyright 2020 Steffen Zimmermann)
-- **Original Source**: [swindon_gov_uk.py](https://github.com/mampfes/hacs_waste_collection_schedule/blob/cb495700e56ddc21d1260b4d4af276f877b8d996/custom_components/waste_collection_schedule/waste_collection_schedule/source/swindon_gov_uk.py)
-
-Thank you to Steffen Zimmermann for creating and maintaining the original scraping logic!
 
 ## ⚠️ Disclaimer
 
