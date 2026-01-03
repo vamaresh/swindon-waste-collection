@@ -83,71 +83,129 @@ class UPRNLookupService:
             raise UPRNLookupError(f"Invalid postcode format: {postcode}")
         
         normalized_postcode = self._normalize_postcode(postcode)
+        logger.debug(f"Looking up postcode: {normalized_postcode}")
         
         try:
-            # First, get the page to extract any necessary form data
+            # Step 1: Get the initial page to extract any hidden form fields
             response = self.session.get(self.COLLECTION_URL, timeout=30)
             response.raise_for_status()
+            logger.debug(f"Initial page loaded, status: {response.status_code}")
             
             # Parse the initial page
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Submit postcode to get address list
-            # The form typically has a postcode input field
-            data = {
-                "postcode": normalized_postcode,
-                "postcodeSubmit": "Find Address"
-            }
+            # Step 2: Extract hidden form fields (common in many council websites)
+            form = soup.find('form')
+            form_data = {}
             
+            if form:
+                for input_field in form.find_all('input', type='hidden'):
+                    name = input_field.get('name')
+                    value = input_field.get('value', '')
+                    if name:
+                        form_data[name] = value
+                        logger.debug(f"Found hidden field: {name}")
+            
+            # Step 3: Try multiple possible field names for postcode submission
+            # Different councils use different field names
+            postcode_field_names = ['postcode', 'Postcode', 'POSTCODE', 'pc', 'PostCode']
+            submit_field_names = ['postcodeSubmit', 'submit', 'Submit', 'find', 'Find', 'search']
+            
+            # Add postcode to form data - try the most common field name first
+            form_data['postcode'] = normalized_postcode
+            
+            # Also try adding common submit button values
+            form_data['postcodeSubmit'] = 'Find Address'
+            
+            logger.debug(f"Form data being submitted: {form_data}")
+            
+            # Step 4: Submit the form
             response = self.session.post(
                 self.COLLECTION_URL,
-                data=data,
+                data=form_data,
                 timeout=30
             )
             response.raise_for_status()
+            logger.debug(f"Response status: {response.status_code}")
+            logger.debug(f"Response content length: {len(response.content)}")
             
-            # Parse response to find address dropdown
+            # Step 5: Parse the response to find address dropdown
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Look for address select dropdown
-            address_select = soup.find('select', {'name': 'addressList'})
+            # Try multiple selectors to find the address dropdown
+            address_select = None
             
+            # Common selector patterns for UK council websites
+            selectors = [
+                ('name', 'addressList'),
+                ('name', 'address'),
+                ('name', 'uprn'),
+                ('name', 'addressSelect'),
+                ('id', 'addressList'),
+                ('id', 'address'),
+                ('id', 'uprn'),
+            ]
+            
+            for attr_type, attr_value in selectors:
+                address_select = soup.find('select', {attr_type: attr_value})
+                if address_select:
+                    logger.debug(f"Found address select with {attr_type}='{attr_value}'")
+                    break
+            
+            # If still not found, try regex search
             if not address_select:
-                # Try alternative approach - look for any select with addresses
                 address_select = soup.find('select', id=re.compile(r'address', re.IGNORECASE))
+                if address_select:
+                    logger.debug(f"Found address select with regex match")
             
             if not address_select:
-                logger.warning(f"No addresses found for postcode: {normalized_postcode}")
-                return []
+                # Log HTML snippet for debugging
+                html_snippet = soup.prettify()[:1000]
+                logger.warning(f"No address dropdown found. HTML snippet: {html_snippet}")
+                
+                # Check if there's an error message on the page
+                error_msg = soup.find('div', class_=re.compile(r'error', re.IGNORECASE))
+                if error_msg:
+                    logger.error(f"Error message found: {error_msg.get_text(strip=True)}")
+                
+                raise UPRNLookupError(f"No addresses found for postcode: {normalized_postcode}")
             
             addresses = []
             
-            # Parse options from select dropdown
+            # Step 6: Parse options from select dropdown
             for option in address_select.find_all('option'):
                 uprn = option.get('value', '').strip()
                 address_text = option.get_text(strip=True)
                 
                 # Skip empty or placeholder options
-                if not uprn or uprn == '' or 'Select' in address_text:
+                if not uprn or 'Select' in address_text or 'Choose' in address_text or '--' in address_text:
                     continue
                 
-                # UPRN should be numeric
-                if not uprn.isdigit():
-                    continue
-                
-                addresses.append({
-                    'uprn': uprn,
-                    'address': address_text
-                })
+                # UPRN validation - UK UPRNs are typically 10-12 digits
+                if uprn.isdigit() and len(uprn) >= 10:
+                    addresses.append({
+                        'uprn': uprn,
+                        'address': address_text
+                    })
+                    logger.debug(f"Found valid address: UPRN={uprn}, Address={address_text[:50]}...")
+            
+            if not addresses:
+                logger.warning(f"No valid addresses found in dropdown for postcode: {normalized_postcode}")
+                raise UPRNLookupError(f"No valid addresses found for postcode: {normalized_postcode}")
             
             logger.info(f"Found {len(addresses)} addresses for postcode {normalized_postcode}")
             return addresses
             
         except requests.exceptions.RequestException as e:
             logger.error(f"Request failed for postcode {postcode}: {str(e)}")
-            raise UPRNLookupError(f"Failed to lookup postcode: {str(e)}")
+            raise UPRNLookupError(f"Failed to connect to Swindon Council website: {str(e)}")
+        except UPRNLookupError:
+            # Re-raise our custom errors
+            raise
         except Exception as e:
             logger.error(f"Unexpected error during lookup: {str(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             raise UPRNLookupError(f"Lookup failed: {str(e)}")
     
     def close(self):
