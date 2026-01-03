@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from typing import List, Dict
 import logging
 import re
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +118,8 @@ class UPRNLookupService:
             # Also try adding common submit button values
             form_data['postcodeSubmit'] = 'Find Address'
             
-            logger.debug(f"Form data being submitted: {form_data}")
+            # Log form field names for debugging (not values to protect sensitive data)
+            logger.debug(f"Form fields being submitted: {list(form_data.keys())}")
             
             # Step 4: Submit the form
             response = self.session.post(
@@ -159,9 +161,10 @@ class UPRNLookupService:
                     logger.debug(f"Found address select with regex match")
             
             if not address_select:
-                # Log HTML snippet for debugging
-                html_snippet = soup.prettify()[:1000]
-                logger.warning(f"No address dropdown found. HTML snippet: {html_snippet}")
+                # Log sanitized HTML structure for debugging (without content to avoid exposing sensitive data)
+                form_tags = soup.find_all('form')
+                select_tags = soup.find_all('select')
+                logger.warning(f"No address dropdown found. Found {len(form_tags)} form(s) and {len(select_tags)} select element(s)")
                 
                 # Check if there's an error message on the page
                 error_msg = soup.find('div', class_=re.compile(r'error', re.IGNORECASE))
@@ -204,7 +207,6 @@ class UPRNLookupService:
             raise
         except Exception as e:
             logger.error(f"Unexpected error during lookup: {str(e)}")
-            import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
             raise UPRNLookupError(f"Lookup failed: {str(e)}")
     
