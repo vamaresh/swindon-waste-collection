@@ -85,7 +85,7 @@ class SwindonScraper:
                 if response.status_code == 403:
                     logger.warning(f"Rate limited (403) on attempt {attempt + 1}")
                     if attempt < self.max_retries - 1:
-                        delay = self.retry_delay * (2 ** attempt)  # Exponential backoff
+                        delay = min(self.retry_delay * (2 ** attempt), 30)  # Cap at 30 seconds
                         time.sleep(delay)
                         continue
                     raise SwindonScraperError("Rate limited by server (403)")
@@ -96,7 +96,7 @@ class SwindonScraper:
             except requests.exceptions.RequestException as e:
                 logger.error(f"Request failed on attempt {attempt + 1}: {str(e)}")
                 if attempt < self.max_retries - 1:
-                    delay = self.retry_delay * (2 ** attempt)
+                    delay = min(self.retry_delay * (2 ** attempt), 30)  # Cap at 30 seconds
                     time.sleep(delay)
                 else:
                     raise SwindonScraperError(f"Failed to fetch data: {str(e)}")

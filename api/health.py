@@ -4,7 +4,7 @@ Health check endpoint for the API
 GET /api/health
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler
 import json
 
@@ -17,7 +17,7 @@ class handler(BaseHTTPRequestHandler):
         try:
             response_data = {
                 "status": "ok",
-                "timestamp": datetime.utcnow().isoformat() + "Z"
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
             
             self.send_response(200)
