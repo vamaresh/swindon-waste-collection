@@ -106,13 +106,19 @@ The `vercel.json` file is already configured with:
 
 ## 🏗️ Architecture
 
-### Backend (Python + FastAPI)
+### Backend (Python Serverless Functions)
 
 Located in `/api/` directory, deployed as Vercel Serverless Functions:
 
 - **`/api/health`** - Health check endpoint
 - **`/api/uprn-lookup`** - POST endpoint for postcode → UPRN lookup
 - **`/api/collections/[uprn]`** - GET endpoint for fetching collection schedule
+
+**Implementation:**
+- Uses Python's `BaseHTTPRequestHandler` for Vercel serverless compatibility
+- Web scraping with BeautifulSoup4 and Requests
+- Retry logic with exponential backoff (max 30s delay)
+- CORS support for cross-origin requests
 
 **Services:**
 - `api/services/swindon_scraper.py` - Web scraper for Swindon Council website
@@ -177,10 +183,9 @@ Use these test UPRNs for Swindon addresses:
 
 **Backend:**
 - Python 3.9+
-- FastAPI
 - BeautifulSoup4
 - Requests
-- Pydantic
+- Python DateUtil
 
 **Deployment:**
 - Vercel (Serverless Functions + Static Hosting)
