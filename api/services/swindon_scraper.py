@@ -132,7 +132,8 @@ class SwindonScraper:
         
         try:
             # Use query parameters, not form data
-            # This matches the actual website behavior
+            # The Swindon website expects these as URL query parameters in a POST request
+            # This is unusual but matches the original working implementation
             params = {
                 "uprnSubmit": "Yes",
                 "addressList": uprn
