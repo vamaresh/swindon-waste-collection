@@ -10,6 +10,7 @@ from http.server import BaseHTTPRequestHandler
 import json
 import sys
 import os
+import traceback
 
 # Add parent directory to path to import services
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -33,8 +34,8 @@ class handler(BaseHTTPRequestHandler):
             # Parse JSON
             try:
                 data = json.loads(body.decode('utf-8'))
-            except json.JSONDecodeError:
-                self.send_error_response(400, "Invalid JSON")
+            except json.JSONDecodeError as e:
+                self.send_error_response(400, f"Invalid JSON: {str(e)}")
                 return
             
             # Validate input
@@ -48,8 +49,11 @@ class handler(BaseHTTPRequestHandler):
             try:
                 addresses = service.lookup(postcode)
                 
+                # If no addresses found, return empty list with 200 (not error)
                 response_data = {
-                    "addresses": addresses
+                    "addresses": addresses,
+                    "postcode": postcode,
+                    "count": len(addresses)
                 }
                 
                 self.send_response(200)
@@ -60,11 +64,29 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps(response_data).encode())
                 
             except UPRNLookupError as e:
-                self.send_error_response(400, str(e))
+                # Return 200 with error details instead of 400
+                # This helps with frontend error handling
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                
+                error_response = {
+                    "addresses": [],
+                    "postcode": postcode,
+                    "count": 0,
+                    "error": str(e),
+                    "error_type": "lookup_error"
+                }
+                self.wfile.write(json.dumps(error_response).encode())
             finally:
                 service.close()
                 
         except Exception as e:
+            # Log full traceback for debugging
+            error_trace = traceback.format_exc()
+            print(f"ERROR: {error_trace}")
+            
             self.send_error_response(500, f"Internal server error: {str(e)}")
     
     def do_OPTIONS(self):
@@ -83,6 +105,8 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         
         error_response = {
-            "error": message
+            "error": message,
+            "addresses": [],
+            "count": 0
         }
         self.wfile.write(json.dumps(error_response).encode())
