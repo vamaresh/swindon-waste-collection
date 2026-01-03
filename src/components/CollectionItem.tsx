@@ -2,7 +2,7 @@
  * Individual collection item component
  */
 
-import { Trash2, Recycle, Leaf, Bottle, Calendar, Clock } from 'lucide-react';
+import { Trash2, Recycle, Leaf, Wine, Calendar, Clock } from 'lucide-react';
 import type { CollectionItemProps } from '../types';
 
 const CollectionItem = ({ collection, isNext = false }: CollectionItemProps) => {
@@ -17,7 +17,7 @@ const CollectionItem = ({ collection, isNext = false }: CollectionItemProps) => 
       case 'leaf':
         return <Leaf className={iconClass} />;
       case 'bottle':
-        return <Bottle className={iconClass} />;
+        return <Wine className={iconClass} />;
       default:
         return <Trash2 className={iconClass} />;
     }
