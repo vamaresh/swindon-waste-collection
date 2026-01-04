@@ -523,6 +523,104 @@
             transform: none;
             box-shadow: none;
         }
+
+        .add-calendar-btn {
+            padding: 6px 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .add-calendar-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .calendar-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .calendar-modal.active {
+            display: flex;
+        }
+
+        .calendar-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .calendar-modal-content h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #2d3748;
+            text-align: center;
+        }
+
+        .calendar-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .calendar-option-btn {
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            background: white;
+            color: #2d3748;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        .calendar-option-btn:hover {
+            border-color: #667eea;
+            background: #f7fafc;
+            transform: translateX(5px);
+        }
+
+        .calendar-option-btn .icon {
+            font-size: 1.5em;
+        }
+
+        .modal-close {
+            margin-top: 20px;
+            padding: 10px;
+            background: #e2e8f0;
+            color: #2d3748;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 600;
+        }
+
+        .modal-close:hover {
+            background: #cbd5e0;
+        }
     </style>
 </head>
 <body>
@@ -602,24 +700,6 @@
                 📅 Your Collection Schedule
             </h2>
             <div class="collections-grid" id="collectionsGrid"></div>
-            
-            <!-- Common Calendar Buttons for All Collections -->
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
-                <div class="reminder-note" style="text-align: center; margin-bottom: 15px;">
-                    💡 Add all your collection reminders to your calendar - notifications at 5 PM the day before
-                </div>
-                <div class="calendar-buttons" style="justify-content: center; max-width: 600px; margin: 0 auto;">
-                    <button class="calendar-btn calendar-btn-google" onclick="addAllToGoogleCalendar()">
-                        📅 Google Calendar
-                    </button>
-                    <button class="calendar-btn calendar-btn-apple" onclick="downloadAllICS()">
-                        🍎 Apple Calendar
-                    </button>
-                    <button class="calendar-btn calendar-btn-outlook" onclick="addAllToOutlookCalendar()">
-                        📧 Outlook Calendar
-                    </button>
-                </div>
-            </div>
             
             <!-- Action Buttons -->
             <div class="action-buttons">
@@ -1430,8 +1510,13 @@ END:VEVENT
                     <div class="collection-icon">${iconHtml}</div>
                     <div class="collection-type">${collection.type}</div>
                     <div class="collection-date">📅 ${dateText}</div>
-                    <div class="collection-days ${getDaysClass(collection.days_until)}">
-                        ${daysText}
+                    <div style="display: flex; align-items: center; gap: 10px; justify-content: center; margin-top: 10px;">
+                        <div class="collection-days ${getDaysClass(collection.days_until)}">
+                            ${daysText}
+                        </div>
+                        <button class="add-calendar-btn" onclick='showCalendarOptions(${JSON.stringify(collection).replace(/'/g, "&#39;")})'>
+                            + Add to Calendar
+                        </button>
                     </div>
                     ${futureDatesHtml}
                 `;
@@ -1503,8 +1588,131 @@ END:VEVENT
             }
         });
 
+        // Calendar Modal Functions
+        let selectedCollection = null;
+
+        function showCalendarOptions(collection) {
+            selectedCollection = collection;
+            const modal = document.getElementById('calendarModal');
+            modal.classList.add('active');
+        }
+
+        function closeCalendarModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            const modal = document.getElementById('calendarModal');
+            modal.classList.remove('active');
+            selectedCollection = null;
+        }
+
+        function selectCalendar(type) {
+            if (!selectedCollection) return;
+
+            if (type === 'google') {
+                addSingleToGoogleCalendar(selectedCollection);
+            } else if (type === 'apple' || type === 'outlook') {
+                downloadSingleICS(selectedCollection, type);
+            }
+
+            closeCalendarModal();
+        }
+
+        // Add single collection date to Google Calendar
+        function addSingleToGoogleCalendar(collection) {
+            const collectionDate = new Date(collection.date);
+            const reminderDate = new Date(collectionDate);
+            reminderDate.setDate(reminderDate.getDate() - 1);
+            reminderDate.setHours(17, 0, 0, 0); // 5 PM day before
+
+            const title = `🗑️ ${collection.type}`;
+            const description = `Tomorrow is your ${collection.type} collection day in Swindon. Don't forget to put your bins out!`;
+            const location = 'Swindon, UK';
+
+            const formatGoogleDate = (date) => {
+                return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+            };
+
+            const startDate = formatGoogleDate(reminderDate);
+            const endDate = formatGoogleDate(new Date(reminderDate.getTime() + 60*60*1000));
+
+            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startDate}/${endDate}&details=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}`;
+
+            window.open(url, '_blank');
+        }
+
+        // Download ICS for single collection
+        function downloadSingleICS(collection, type) {
+            const collectionDate = new Date(collection.date);
+            const reminderDate = new Date(collectionDate);
+            reminderDate.setDate(reminderDate.getDate() - 1);
+            reminderDate.setHours(17, 0, 0, 0); // 5 PM day before
+
+            const title = `🗑️ ${collection.type}`;
+            const description = `Tomorrow is your ${collection.type} collection day in Swindon. Don't forget to put your bins out!`;
+            const location = 'Swindon, UK';
+
+            const formatICSDate = (date) => {
+                return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+            };
+
+            const ics = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Swindon Waste Collections//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:${collection.date}-${collection.type.replace(/\s/g, '-')}@swindon-waste.app
+DTSTAMP:${formatICSDate(new Date())}
+DTSTART:${formatICSDate(reminderDate)}
+DTEND:${formatICSDate(new Date(reminderDate.getTime() + 60*60*1000))}
+SUMMARY:${title}
+DESCRIPTION:${description}
+LOCATION:${location}
+STATUS:CONFIRMED
+SEQUENCE:0
+BEGIN:VALARM
+TRIGGER:-PT0M
+DESCRIPTION:${description}
+ACTION:DISPLAY
+END:VALARM
+END:VEVENT
+END:VCALENDAR`;
+
+            const blob = new Blob([ics], { type: 'text/calendar' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${collection.type.replace(/\s/g, '-')}-${collection.date}.ics`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
         // Initialize
         updateSteps(1);
     </script>
+
+    <!-- Calendar Selection Modal -->
+    <div id="calendarModal" class="calendar-modal" onclick="closeCalendarModal(event)">
+        <div class="calendar-modal-content" onclick="event.stopPropagation()">
+            <h3>Add to Calendar</h3>
+            <div class="calendar-options">
+                <button class="calendar-option-btn" onclick="selectCalendar('google')">
+                    <span class="icon">📅</span>
+                    <span>Google Calendar</span>
+                </button>
+                <button class="calendar-option-btn" onclick="selectCalendar('apple')">
+                    <span class="icon">🍎</span>
+                    <span>Apple Calendar</span>
+                </button>
+                <button class="calendar-option-btn" onclick="selectCalendar('outlook')">
+                    <span class="icon">📧</span>
+                    <span>Outlook Calendar</span>
+                </button>
+            </div>
+            <button class="modal-close" onclick="closeCalendarModal()">Cancel</button>
+        </div>
+    </div>
 </body>
 </html>
+
