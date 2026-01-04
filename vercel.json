@@ -1,7 +1,6 @@
 {
   "framework": null,
   "buildCommand": "echo 'No build needed'",
-  "install Command": "echo 'No install needed'",
   "devCommand": "python3 -m http.server 3000",
   "outputDirectory": ".",
   "routes": [
