@@ -29,19 +29,38 @@ class SwindonScraper:
     BASE_URL = "https://www.swindon.gov.uk"
     COLLECTION_URL = f"{BASE_URL}/info/20122/rubbish_and_recycling_collection_days"
     
-    # Waste type to icon mapping
+    # Icon class to image URL mapping (from Swindon website)
+    BIN_ICON_IMAGES = {
+        "black-food-bin-icon": f"{BASE_URL}/images/black_wheelie_food_bin_swindon.png",
+        "recycle-blue-weighted-food-icon": f"{BASE_URL}/images/recycling_blue_food_swindon.png",
+        "recycle-blue-weighted-icon": f"{BASE_URL}/images/recycling_blue_weighted_swindon.png",
+        "rubbish-blue-bag-food-icon": f"{BASE_URL}/images/rubbish_blue_bag_food_swindon.png",
+        "garden-bin-icon": f"{BASE_URL}/images/green_waste_wheelie_swindon.png",
+        "garden-bag-icon": f"{BASE_URL}/images/plastic_bag_green_swindon.png",
+        "black-bin-icon": f"{BASE_URL}/images/black_wheelie_swindon.png",
+        "refuse-communal-bin-icon": f"{BASE_URL}/images/communal_bin_swindon.png",
+        "recycling-communal-bin-icon": f"{BASE_URL}/images/communal_recyling_swindon.png"
+    }
+    
+    # Waste type to icon mapping (fallback)
     WASTE_TYPE_ICONS = {
         "Rubbish bin": "trash-can",
+        "Rubbish bin and food waste": "trash-can",
         "Recycling boxes": "recycle",
+        "Recycling and food waste": "recycle",
         "Garden waste bin": "leaf",
+        "Garden waste": "leaf",
         "Plastics": "bottle"
     }
     
     # Waste type to color mapping
     WASTE_TYPE_COLORS = {
         "Rubbish bin": "rubbish",
+        "Rubbish bin and food waste": "rubbish",
         "Recycling boxes": "recycling",
+        "Recycling and food waste": "recycling",
         "Garden waste bin": "garden",
+        "Garden waste": "garden",
         "Plastics": "plastics"
     }
     
@@ -117,17 +136,22 @@ class SwindonScraper:
             SwindonScraperError: If scraping fails
         """
         try:
-            # Make POST request to get collection data
-            data = {
+            # Make GET request with UPRN params (not POST!)
+            params = {
                 "uprnSubmit": "Yes",
                 "addressList": uprn
             }
             
+            logger.info(f"Fetching collections for UPRN {uprn}")
+            print(f"[SCRAPER] GET request to {self.COLLECTION_URL} with UPRN {uprn}")
+            
             response = self._make_request(
                 self.COLLECTION_URL,
-                method="POST",
-                data=data
+                method="GET",
+                params=params
             )
+            
+            print(f"[SCRAPER] Response received, status: {response.status_code}")
             
             # Parse HTML response
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -171,14 +195,29 @@ class SwindonScraper:
                 # Calculate days until collection
                 days_until = (collection_date - today).days
                 
-                # Get icon and color for waste type
+                # Extract bin icon from bin-icons div
+                bin_image_url = None
+                bin_icons_div = section.find('div', class_='bin-icons')
+                if bin_icons_div:
+                    classes = bin_icons_div.get('class', [])
+                    # Find which icon class is used
+                    for icon_class in self.BIN_ICON_IMAGES.keys():
+                        if icon_class in classes:
+                            bin_image_url = self.BIN_ICON_IMAGES[icon_class]
+                            print(f"[SCRAPER] Found bin icon: {icon_class} -> {bin_image_url}")
+                            break
+                
+                # Get fallback icon and color for waste type
                 icon = self.WASTE_TYPE_ICONS.get(waste_type, "trash-can")
+                color = self.WASTE_TYPE_COLORS.get(waste_type, "")
                 
                 collections.append({
                     "date": collection_date.isoformat(),
                     "type": waste_type,
                     "icon": icon,
-                    "days_until": days_until
+                    "color": color,
+                    "days_until": days_until,
+                    "bin_image": bin_image_url  # Add actual bin image from website
                 })
             
             # Sort by date

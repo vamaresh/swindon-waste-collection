@@ -5,11 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Swindon Waste Collections</title>
     <meta name="description" content="Check your waste collection schedule for Swindon Borough Council">
-    <meta name="theme-color" content="#667eea">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
     <style>
         * {
             margin: 0;
@@ -324,120 +319,6 @@
             background: #48bb78;
             color: white;
         }
-
-        /* Calendar buttons */
-        .calendar-buttons {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #e2e8f0;
-        }
-
-        .calendar-btn {
-            padding: 8px 14px;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.85em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .calendar-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .calendar-btn-google {
-            background: #4285f4;
-            color: white;
-        }
-
-        .calendar-btn-apple {
-            background: #000;
-            color: white;
-        }
-
-        .calendar-btn-outlook {
-            background: #0078d4;
-            color: white;
-        }
-
-        .change-address-btn {
-            background: #718096;
-            color: white;
-            margin-top: 20px;
-        }
-
-        .change-address-btn:hover {
-            background: #4a5568;
-        }
-
-        .cached-info {
-            background: #e6fffa;
-            border: 2px solid #81e6d9;
-            color: #234e52;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .cached-info strong {
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .install-prompt {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            text-align: center;
-            display: none;
-        }
-
-        .install-prompt.active {
-            display: block;
-        }
-
-        .install-prompt button {
-            background: white;
-            color: #667eea;
-            margin-top: 10px;
-        }
-
-        .assistant-info {
-            background: #fef5e7;
-            border: 2px solid #f9e79f;
-            color: #7d6608;
-            padding: 20px;
-            border-radius: 12px;
-            margin-top: 20px;
-        }
-
-        .assistant-info h3 {
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-
-        .assistant-info p {
-            font-size: 0.9em;
-            line-height: 1.6;
-            margin-bottom: 8px;
-        }
-
-        .assistant-info ul {
-            margin-left: 20px;
-            font-size: 0.9em;
-        }
     </style>
 </head>
 <body>
@@ -463,21 +344,6 @@
 
         <!-- Success Message -->
         <div class="success" id="successMessage"></div>
-
-        <!-- Install Prompt -->
-        <div class="install-prompt" id="installPrompt">
-            <p>📱 <strong>Install this app</strong> for quick access to your bin collection dates!</p>
-            <button onclick="installApp()" class="btn">Install App</button>
-            <button onclick="dismissInstall()" class="btn" style="background: transparent; color: white; border: 1px solid white;">Not Now</button>
-        </div>
-
-        <!-- Cached Info -->
-        <div class="cached-info hidden" id="cachedInfo">
-            <strong>📍 Saved Address</strong>
-            <p id="cachedAddress"></p>
-            <button onclick="showCollections()" class="btn" style="margin-top: 10px;">View Collections</button>
-            <button onclick="clearCache()" class="btn change-address-btn">Change Address</button>
-        </div>
 
         <!-- Step 1: Postcode Form -->
         <div class="card" id="postcodeCard">
@@ -518,21 +384,8 @@
                 📅 Your Collection Schedule
             </h2>
             <div class="collections-grid" id="collectionsGrid"></div>
-            
-            <!-- Smart Assistant Info -->
-            <div class="assistant-info">
-                <h3>🤖 Smart Assistant Integration</h3>
-                <p><strong>To get voice reminders on Alexa or Google Assistant:</strong></p>
-                <ul>
-                    <li><strong>Google Assistant:</strong> Add reminders to Google Calendar (click buttons above), then Google Assistant will notify you automatically</li>
-                    <li><strong>Alexa:</strong> Link your Google or Outlook calendar to Alexa in the Alexa app (Settings → Calendar → Link calendar)</li>
-                    <li><strong>Siri:</strong> Add to Apple Calendar, Siri will automatically remind you</li>
-                </ul>
-                <p style="margin-top: 10px;">💡 All calendar reminders are set for <strong>1 day before</strong> collection at 7:00 PM</p>
-            </div>
-
-            <button onclick="clearCache()" class="btn change-address-btn">
-                Change Address
+            <button onclick="reset()" style="margin-top: 20px; background: #718096;">
+                Search Again
             </button>
         </div>
 
@@ -542,110 +395,17 @@
     </div>
 
     <script>
-        // Configuration
-        const API_BASE = '/api';
-        const CACHE_KEY = 'swindon_waste_data';
-        const CACHE_EXPIRY_DAYS = 1; // Cache for 1 day
+        // Configuration - we'll use a CORS proxy or direct API if available
+        // For now, let's assume the backend API is available
+        const API_BASE = '/api';  // Relative path for Vercel deployment
         
         let addresses = [];
         let selectedUPRN = null;
-        let cachedCollections = null;
-        let deferredPrompt = null;
-
-        // PWA Install Prompt
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            // Show install prompt if not previously dismissed
-            if (!localStorage.getItem('installDismissed')) {
-                document.getElementById('installPrompt').classList.add('active');
-            }
-        });
-
-        function installApp() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('App installed');
-                    }
-                    deferredPrompt = null;
-                    document.getElementById('installPrompt').classList.remove('active');
-                });
-            }
-        }
-
-        function dismissInstall() {
-            localStorage.setItem('installDismissed', 'true');
-            document.getElementById('installPrompt').classList.remove('active');
-        }
-
-        // Register Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('Service Worker registered'))
-                    .catch(err => console.log('Service Worker registration failed:', err));
-            });
-        }
 
         // Check if we're in development or production
         const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         console.log('Environment:', isDev ? 'Development' : 'Production');
         console.log('API Base:', API_BASE);
-
-        // Initialize on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            checkCache();
-        });
-
-        // Check for cached data
-        function checkCache() {
-            const cached = localStorage.getItem(CACHE_KEY);
-            if (cached) {
-                const data = JSON.parse(cached);
-                const now = new Date().getTime();
-                const cacheAge = now - data.timestamp;
-                const maxAge = CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
-
-                if (cacheAge < maxAge) {
-                    // Cache is still valid
-                    selectedUPRN = data.uprn;
-                    cachedCollections = data.collections;
-                    
-                    // Show cached info
-                    document.getElementById('cachedAddress').textContent = data.address;
-                    document.getElementById('cachedInfo').classList.remove('hidden');
-                    
-                    // Auto-load collections
-                    displayCollections(cachedCollections);
-                    hideElement('postcodeCard');
-                    hideElement('addressCard');
-                    updateSteps(3);
-                } else {
-                    // Cache expired
-                    clearCache();
-                }
-            }
-        }
-
-        // Save to cache
-        function saveToCache(uprn, address, collections) {
-            const data = {
-                uprn: uprn,
-                address: address,
-                collections: collections,
-                timestamp: new Date().getTime()
-            };
-            localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-        }
-
-        // Clear cache
-        function clearCache() {
-            localStorage.removeItem(CACHE_KEY);
-            document.getElementById('cachedInfo').classList.add('hidden');
-            reset();
-        }
 
         // Update step indicator
         function updateSteps(currentStep) {
@@ -694,17 +454,10 @@
 
         // Lookup postcode
         async function lookupPostcode() {
-            const postcode = document.getElementById('postcode').value.trim().toUpperCase();
+            const postcode = document.getElementById('postcode').value.trim();
             
             if (!postcode) {
                 showError('Please enter a postcode');
-                return;
-            }
-            
-            // Basic postcode validation
-            const postcodeRegex = /^[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}$/i;
-            if (!postcodeRegex.test(postcode)) {
-                showError('Please enter a valid UK postcode (e.g., SN1 1JJ)');
                 return;
             }
 
@@ -712,14 +465,9 @@
             btn.disabled = true;
             btn.textContent = 'Searching...';
             showLoading();
-            
-            console.log('[Frontend] Looking up postcode:', postcode);
 
             try {
-                const url = `${API_BASE}/uprn-lookup`;
-                console.log('[Frontend] Calling API:', url);
-                
-                const response = await fetch(url, {
+                const response = await fetch(`${API_BASE}/api/uprn-lookup`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -727,18 +475,10 @@
                     body: JSON.stringify({ postcode })
                 });
 
-                console.log('[Frontend] Response status:', response.status);
-                
                 const data = await response.json();
-                console.log('[Frontend] Response data:', data);
-
-                if (!response.ok) {
-                    showError(data.error || `Server error: ${response.status}`);
-                    return;
-                }
 
                 if (data.error || !data.addresses || data.addresses.length === 0) {
-                    showError(data.error || 'No addresses found for this postcode. Please check the postcode is in Swindon Borough.');
+                    showError(data.error || 'No addresses found for this postcode');
                     return;
                 }
 
@@ -748,8 +488,8 @@
                 updateSteps(2);
 
             } catch (error) {
-                console.error('[Frontend] Error:', error);
-                showError(`Failed to lookup postcode: ${error.message}. Please check your connection and try again.`);
+                showError('Failed to lookup postcode. Please try again.');
+                console.error('Error:', error);
             } finally {
                 hideLoading();
                 btn.disabled = false;
@@ -781,23 +521,10 @@
 
             selectedUPRN = uprn;
             showLoading();
-            
-            console.log('[Frontend] Fetching collections for UPRN:', uprn);
 
             try {
-                const url = `${API_BASE}/waste-collections/${uprn}`;
-                console.log('[Frontend] Calling API:', url);
-                
-                const response = await fetch(url);
-                console.log('[Frontend] Response status:', response.status);
-                
+                const response = await fetch(`${API_BASE}/api/collections/${uprn}`);
                 const data = await response.json();
-                console.log('[Frontend] Response data:', data);
-
-                if (!response.ok) {
-                    showError(data.error || `Server error: ${response.status}`);
-                    return;
-                }
 
                 if (data.error) {
                     showError(data.error);
@@ -805,126 +532,19 @@
                 }
 
                 if (!data.collections || data.collections.length === 0) {
-                    showError('No collection data found for this address. Please contact Swindon Borough Council.');
+                    showError('No collection data found for this address');
                     return;
                 }
-
-                // Save to cache
-                const selectedAddress = addresses.find(a => a.uprn === uprn);
-                saveToCache(uprn, selectedAddress.address, data.collections);
 
                 displayCollections(data.collections);
                 updateSteps(3);
 
             } catch (error) {
-                console.error('[Frontend] Error:', error);
-                showError(`Failed to load collections: ${error.message}`);
+                showError('Failed to load collections. Please try again.');
+                console.error('Error:', error);
             } finally {
                 hideLoading();
             }
-        }
-
-        // Show collections from cache
-        function showCollections() {
-            if (cachedCollections) {
-                displayCollections(cachedCollections);
-                hideElement('postcodeCard');
-                hideElement('addressCard');
-                updateSteps(3);
-            }
-        }
-
-        // Calendar Functions
-        function createICS(collection) {
-            const collectionDate = new Date(collection.date);
-            const reminderDate = new Date(collectionDate);
-            reminderDate.setDate(reminderDate.getDate() - 1);
-            reminderDate.setHours(19, 0, 0, 0); // 7 PM day before
-
-            const formatICSDate = (date) => {
-                return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-            };
-
-            const title = `🗑️ ${collection.type}`;
-            const description = `Tomorrow is your ${collection.type} collection day in Swindon. Don't forget to put your bins out!`;
-            const location = 'Swindon, UK';
-
-            // Create ICS content
-            const ics = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Swindon Waste Collections//EN
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-BEGIN:VEVENT
-UID:${collection.date}-${collection.type.replace(/\s/g, '-')}@swindon-waste.app
-DTSTAMP:${formatICSDate(new Date())}
-DTSTART:${formatICSDate(reminderDate)}
-DTEND:${formatICSDate(new Date(reminderDate.getTime() + 60*60*1000))}
-SUMMARY:${title}
-DESCRIPTION:${description}
-LOCATION:${location}
-STATUS:CONFIRMED
-SEQUENCE:0
-BEGIN:VALARM
-TRIGGER:-PT0M
-DESCRIPTION:${description}
-ACTION:DISPLAY
-END:VALARM
-END:VEVENT
-END:VCALENDAR`;
-
-            return ics;
-        }
-
-        function downloadICS(collection) {
-            const ics = createICS(collection);
-            const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `${collection.type.replace(/\s/g, '-')}-${collection.date}.ics`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            showSuccess('Calendar file downloaded! Open it to add to your calendar.');
-        }
-
-        function addToGoogleCalendar(collection) {
-            const collectionDate = new Date(collection.date);
-            const reminderDate = new Date(collectionDate);
-            reminderDate.setDate(reminderDate.getDate() - 1);
-            reminderDate.setHours(19, 0, 0, 0);
-
-            const formatGoogleDate = (date) => {
-                return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-            };
-
-            const title = encodeURIComponent(`🗑️ ${collection.type}`);
-            const details = encodeURIComponent(`Tomorrow is your ${collection.type} collection day. Don't forget to put your bins out!`);
-            const location = encodeURIComponent('Swindon, UK');
-            const dates = `${formatGoogleDate(reminderDate)}/${formatGoogleDate(new Date(reminderDate.getTime() + 60*60*1000))}`;
-
-            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}&reminder=0`;
-            window.open(url, '_blank');
-        }
-
-        function addToOutlookCalendar(collection) {
-            const collectionDate = new Date(collection.date);
-            const reminderDate = new Date(collectionDate);
-            reminderDate.setDate(reminderDate.getDate() - 1);
-            reminderDate.setHours(19, 0, 0, 0);
-
-            const formatOutlookDate = (date) => {
-                return date.toISOString();
-            };
-
-            const title = encodeURIComponent(`🗑️ ${collection.type}`);
-            const body = encodeURIComponent(`Tomorrow is your ${collection.type} collection day. Don't forget to put your bins out!`);
-            const location = encodeURIComponent('Swindon, UK');
-            const startdt = formatOutlookDate(reminderDate);
-            const enddt = formatOutlookDate(new Date(reminderDate.getTime() + 60*60*1000));
-
-            const url = `https://outlook.live.com/calendar/0/deeplink/compose?subject=${title}&body=${body}&location=${location}&startdt=${startdt}&enddt=${enddt}&reminderMinutes=0`;
-            window.open(url, '_blank');
         }
 
         // Display collections
@@ -939,35 +559,16 @@ END:VCALENDAR`;
                 const card = document.createElement('div');
                 card.className = `collection-card ${collection.color || ''}`;
 
-                // Use actual bin image if available, otherwise use emoji
-                let iconHtml;
-                if (collection.bin_image) {
-                    iconHtml = `<img src="${collection.bin_image}" alt="${collection.type}" style="width: 120px; height: 120px; object-fit: contain;">`;
-                } else {
-                    const icon = getWasteIcon(collection.type);
-                    iconHtml = icon;
-                }
-
+                const icon = getWasteIcon(collection.type);
                 const daysText = getDaysText(collection.days_until);
                 const dateText = formatDate(collection.date);
 
                 card.innerHTML = `
-                    <div class="collection-icon">${iconHtml}</div>
+                    <div class="collection-icon">${icon}</div>
                     <div class="collection-type">${collection.type}</div>
                     <div class="collection-date">📅 ${dateText}</div>
                     <div class="collection-days ${getDaysClass(collection.days_until)}">
                         ${daysText}
-                    </div>
-                    <div class="calendar-buttons">
-                        <button class="calendar-btn calendar-btn-google" onclick='addToGoogleCalendar(${JSON.stringify(collection).replace(/'/g, "&#39;")})'>
-                            📅 Google
-                        </button>
-                        <button class="calendar-btn calendar-btn-apple" onclick='downloadICS(${JSON.stringify(collection).replace(/'/g, "&#39;")})'>
-                            🍎 Apple
-                        </button>
-                        <button class="calendar-btn calendar-btn-outlook" onclick='addToOutlookCalendar(${JSON.stringify(collection).replace(/'/g, "&#39;")})'>
-                            📧 Outlook
-                        </button>
                     </div>
                 `;
 
@@ -979,15 +580,12 @@ END:VCALENDAR`;
             showElement('collectionsCard');
         }
 
-        // Get waste icon (fallback emojis)
+        // Get waste icon
         function getWasteIcon(type) {
             const icons = {
                 'Rubbish bin': '🗑️',
-                'Rubbish bin and food waste': '🗑️',
                 'Recycling boxes': '♻️',
-                'Recycling and food waste': '♻️',
                 'Garden waste bin': '🍂',
-                'Garden waste': '🍂',
                 'Plastics': '🧴'
             };
             return icons[type] || '📦';
@@ -1022,12 +620,10 @@ END:VCALENDAR`;
             
             hideElement('addressCard');
             hideElement('collectionsCard');
-            hideElement('cachedInfo');
             showElement('postcodeCard');
             
             addresses = [];
             selectedUPRN = null;
-            cachedCollections = null;
             updateSteps(1);
         }
 

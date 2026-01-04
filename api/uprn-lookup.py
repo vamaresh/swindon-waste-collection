@@ -26,28 +26,37 @@ class handler(BaseHTTPRequestHandler):
     
     def do_POST(self):
         """Handle POST request"""
+        print("[UPRN LOOKUP] POST request received")
         try:
             # Read request body
             content_length = int(self.headers.get('Content-Length', 0))
+            print(f"[UPRN LOOKUP] Content-Length: {content_length}")
             body = self.rfile.read(content_length)
             
             # Parse JSON
             try:
                 data = json.loads(body.decode('utf-8'))
+                print(f"[UPRN LOOKUP] Parsed request data: {data}")
             except json.JSONDecodeError as e:
+                print(f"[UPRN LOOKUP] JSON decode error: {str(e)}")
                 self.send_error_response(400, f"Invalid JSON: {str(e)}")
                 return
             
             # Validate input
             postcode = data.get('postcode')
             if not postcode:
+                print("[UPRN LOOKUP] Missing postcode in request")
                 self.send_error_response(400, "Missing postcode field")
                 return
+            
+            print(f"[UPRN LOOKUP] Looking up postcode: {postcode}")
             
             # Perform lookup
             service = UPRNLookupService()
             try:
+                print(f"[UPRN LOOKUP] Starting lookup service...")
                 addresses = service.lookup(postcode)
+                print(f"[UPRN LOOKUP] Found {len(addresses)} addresses")
                 
                 # If no addresses found, return empty list with 200 (not error)
                 response_data = {
@@ -56,6 +65,7 @@ class handler(BaseHTTPRequestHandler):
                     "count": len(addresses)
                 }
                 
+                print(f"[UPRN LOOKUP] Sending success response with {len(addresses)} addresses")
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', '*')
@@ -66,6 +76,7 @@ class handler(BaseHTTPRequestHandler):
             except UPRNLookupError as e:
                 # Return 200 with error details instead of 400
                 # This helps with frontend error handling
+                print(f"[UPRN LOOKUP] Lookup error: {str(e)}")
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', '*')
@@ -79,13 +90,20 @@ class handler(BaseHTTPRequestHandler):
                     "error_type": "lookup_error"
                 }
                 self.wfile.write(json.dumps(error_response).encode())
+            except Exception as e:
+                print(f"[UPRN LOOKUP] Unexpected service error: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                self.send_error_response(500, f"Service error: {str(e)}")
             finally:
                 service.close()
                 
         except Exception as e:
             # Log full traceback for debugging
+            print(f"[UPRN LOOKUP] Handler exception: {str(e)}")
+            import traceback
             error_trace = traceback.format_exc()
-            print(f"ERROR: {error_trace}")
+            print(f"[UPRN LOOKUP] ERROR TRACE: {error_trace}")
             
             self.send_error_response(500, f"Internal server error: {str(e)}")
     
