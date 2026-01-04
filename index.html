@@ -603,6 +603,24 @@
             </h2>
             <div class="collections-grid" id="collectionsGrid"></div>
             
+            <!-- Common Calendar Buttons for All Collections -->
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+                <div class="reminder-note" style="text-align: center; margin-bottom: 15px;">
+                    💡 Add all your collection reminders to your calendar - notifications at 5 PM the day before
+                </div>
+                <div class="calendar-buttons" style="justify-content: center; max-width: 600px; margin: 0 auto;">
+                    <button class="calendar-btn calendar-btn-google" onclick="addAllToGoogleCalendar()">
+                        📅 Google Calendar
+                    </button>
+                    <button class="calendar-btn calendar-btn-apple" onclick="downloadAllICS()">
+                        🍎 Apple Calendar
+                    </button>
+                    <button class="calendar-btn calendar-btn-outlook" onclick="addAllToOutlookCalendar()">
+                        📧 Outlook Calendar
+                    </button>
+                </div>
+            </div>
+            
             <!-- Action Buttons -->
             <div class="action-buttons">
                 <button onclick="installPWA()" class="action-btn install-app-btn" id="installAppBtn" style="display: none;">
@@ -622,7 +640,7 @@
                     <li><strong>Alexa:</strong> Link your Google or Outlook calendar to Alexa in the Alexa app (Settings → Calendar → Link calendar)</li>
                     <li><strong>Siri:</strong> Add to Apple Calendar, Siri will automatically remind you</li>
                 </ul>
-                <p style="margin-top: 10px;">💡 All calendar reminders are set for <strong>1 day before</strong> collection at 7:00 PM</p>
+                <p style="margin-top: 10px;">💡 All calendar reminders are set for <strong>1 day before</strong> collection at 5:00 PM</p>
             </div>
 
             <button onclick="clearCache()" class="btn change-address-btn">
@@ -705,7 +723,7 @@
             }
 
             if (Notification.permission === 'granted') {
-                alert('Notifications are already enabled! ✅\\n\\nYou will receive reminders at 7 PM the day before each collection.');
+                alert('Notifications are already enabled! ✅\\n\\nYou will receive reminders at 5 PM the day before each collection.');
                 return;
             }
 
@@ -727,7 +745,7 @@
                 
                 // Show test notification
                 new Notification('🗑️ Swindon Waste Collections', {
-                    body: 'Reminders enabled! You will be notified at 7 PM the day before each collection.',
+                    body: 'Reminders enabled! You will be notified at 5 PM the day before each collection.',
                     icon: '/icons/icon-192x192.png'
                 });
             } else {
@@ -748,7 +766,7 @@
                     const collectionDate = new Date(dateStr);
                     const reminderDate = new Date(collectionDate);
                     reminderDate.setDate(reminderDate.getDate() - 1);
-                    reminderDate.setHours(19, 0, 0, 0); // 7 PM day before
+                    reminderDate.setHours(17, 0, 0, 0); // 5 PM day before
                     
                     const timeUntilReminder = reminderDate.getTime() - now.getTime();
                     
@@ -1046,7 +1064,7 @@
             }
         }
 
-        // Calendar Functions
+        // Calendar Functions - Add ALL collections
         function createICS(collection) {
             const title = `🗑️ ${collection.type}`;
             const description = `Tomorrow is your ${collection.type} collection day in Swindon. Don't forget to put your bins out!`;
@@ -1070,7 +1088,7 @@ METHOD:PUBLISH
                 const collectionDate = new Date(dateStr);
                 const reminderDate = new Date(collectionDate);
                 reminderDate.setDate(reminderDate.getDate() - 1);
-                reminderDate.setHours(19, 0, 0, 0); // 7 PM day before
+                reminderDate.setHours(17, 0, 0, 0); // 5 PM day before
 
                 ics += `BEGIN:VEVENT
 UID:${dateStr}-${collection.type.replace(/\s/g, '-')}-${index}@swindon-waste.app
@@ -1095,6 +1113,167 @@ END:VEVENT
             return ics;
         }
 
+        // Download ICS for ALL collection types
+        function downloadAllICS() {
+            if (!cachedCollections || cachedCollections.length === 0) {
+                alert('No collections to add. Please select an address first.');
+                return;
+            }
+
+            const formatICSDate = (date) => {
+                return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+            };
+
+            let ics = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Swindon Waste Collections//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+`;
+
+            let totalEvents = 0;
+            
+            // Add all collections and all their dates
+            cachedCollections.forEach(collection => {
+                const dates = collection.dates || [collection.date];
+                const title = `🗑️ ${collection.type}`;
+                const description = `Tomorrow is your ${collection.type} collection day in Swindon. Don't forget to put your bins out!`;
+                
+                dates.forEach((dateStr, index) => {
+                    const collectionDate = new Date(dateStr);
+                    const reminderDate = new Date(collectionDate);
+                    reminderDate.setDate(reminderDate.getDate() - 1);
+                    reminderDate.setHours(17, 0, 0, 0); // 5 PM day before
+
+                    ics += `BEGIN:VEVENT
+UID:${dateStr}-${collection.type.replace(/\s/g, '-')}-${index}@swindon-waste.app
+DTSTAMP:${formatICSDate(new Date())}
+DTSTART:${formatICSDate(reminderDate)}
+DTEND:${formatICSDate(new Date(reminderDate.getTime() + 60*60*1000))}
+SUMMARY:${title}
+DESCRIPTION:${description}
+LOCATION:Swindon, UK
+STATUS:CONFIRMED
+SEQUENCE:0
+BEGIN:VALARM
+TRIGGER:-PT0M
+DESCRIPTION:${description}
+ACTION:DISPLAY
+END:VALARM
+END:VEVENT
+`;
+                    totalEvents++;
+                });
+            });
+
+            ics += 'END:VCALENDAR';
+
+            const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `swindon-waste-collections.ics`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showSuccess(`Calendar file with ${totalEvents} collection reminders downloaded! Open it to add to your calendar.`);
+        }
+
+        // Add ALL collections to Google Calendar
+        function addAllToGoogleCalendar() {
+            if (!cachedCollections || cachedCollections.length === 0) {
+                alert('No collections to add. Please select an address first.');
+                return;
+            }
+
+            let totalEvents = 0;
+            cachedCollections.forEach(collection => {
+                const dates = collection.dates || [collection.date];
+                totalEvents += dates.length;
+            });
+
+            if (!confirm(`This will open ${totalEvents} Google Calendar tabs (one for each collection date). Continue?`)) {
+                return;
+            }
+
+            let tabIndex = 0;
+            cachedCollections.forEach(collection => {
+                const dates = collection.dates || [collection.date];
+                
+                dates.forEach((dateStr) => {
+                    setTimeout(() => {
+                        const collectionDate = new Date(dateStr);
+                        const reminderDate = new Date(collectionDate);
+                        reminderDate.setDate(reminderDate.getDate() - 1);
+                        reminderDate.setHours(17, 0, 0, 0); // 5 PM day before
+
+                        const formatGoogleDate = (date) => {
+                            return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                        };
+
+                        const title = encodeURIComponent(`🗑️ ${collection.type}`);
+                        const details = encodeURIComponent(`Tomorrow is your ${collection.type} collection day. Don't forget to put your bins out!`);
+                        const location = encodeURIComponent('Swindon, UK');
+                        const dateParam = `${formatGoogleDate(reminderDate)}/${formatGoogleDate(new Date(reminderDate.getTime() + 60*60*1000))}`;
+
+                        const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateParam}&details=${details}&location=${location}&reminder=0`;
+                        window.open(url, '_blank');
+                    }, tabIndex * 500); // Stagger opening tabs by 500ms
+                    tabIndex++;
+                });
+            });
+            
+            showSuccess(`Opening ${totalEvents} Google Calendar tabs...`);
+        }
+
+        // Add ALL collections to Outlook Calendar
+        function addAllToOutlookCalendar() {
+            if (!cachedCollections || cachedCollections.length === 0) {
+                alert('No collections to add. Please select an address first.');
+                return;
+            }
+
+            let totalEvents = 0;
+            cachedCollections.forEach(collection => {
+                const dates = collection.dates || [collection.date];
+                totalEvents += dates.length;
+            });
+
+            if (!confirm(`This will open ${totalEvents} Outlook Calendar tabs (one for each collection date). Continue?`)) {
+                return;
+            }
+
+            let tabIndex = 0;
+            cachedCollections.forEach(collection => {
+                const dates = collection.dates || [collection.date];
+                
+                dates.forEach((dateStr) => {
+                    setTimeout(() => {
+                        const collectionDate = new Date(dateStr);
+                        const reminderDate = new Date(collectionDate);
+                        reminderDate.setDate(reminderDate.getDate() - 1);
+                        reminderDate.setHours(17, 0, 0, 0); // 5 PM day before
+
+                        const formatOutlookDate = (date) => {
+                            return date.toISOString();
+                        };
+
+                        const title = encodeURIComponent(`🗑️ ${collection.type}`);
+                        const body = encodeURIComponent(`Tomorrow is your ${collection.type} collection day. Don't forget to put your bins out!`);
+                        const location = encodeURIComponent('Swindon, UK');
+                        const startdt = formatOutlookDate(reminderDate);
+                        const enddt = formatOutlookDate(new Date(reminderDate.getTime() + 60*60*1000));
+
+                        const url = `https://outlook.live.com/calendar/0/deeplink/compose?subject=${title}&body=${body}&location=${location}&startdt=${startdt}&enddt=${enddt}&reminderMinutes=0`;
+                        window.open(url, '_blank');
+                    }, tabIndex * 500); // Stagger opening tabs by 500ms
+                    tabIndex++;
+                });
+            });
+            
+            showSuccess(`Opening ${totalEvents} Outlook Calendar tabs...`);
+        }
+
+        // Legacy functions (kept for compatibility but not used in UI anymore)
         function downloadICS(collection) {
             const ics = createICS(collection);
             const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
@@ -1255,18 +1434,6 @@ END:VEVENT
                         ${daysText}
                     </div>
                     ${futureDatesHtml}
-                    <div class="reminder-note">💡 Set up calendar reminders - notifications at 7 PM the day before</div>
-                    <div class="calendar-buttons">
-                        <button class="calendar-btn calendar-btn-google" onclick='addToGoogleCalendar(${JSON.stringify(collection).replace(/'/g, "&#39;")})' title="Add all ${collection.dates ? collection.dates.length : 1} collection(s) to Google Calendar">
-                            📅 Google Calendar
-                        </button>
-                        <button class="calendar-btn calendar-btn-apple" onclick='downloadICS(${JSON.stringify(collection).replace(/'/g, "&#39;")})' title="Download calendar file with all ${collection.dates ? collection.dates.length : 1} collection(s)">
-                            🍎 Apple Calendar
-                        </button>
-                        <button class="calendar-btn calendar-btn-outlook" onclick='addToOutlookCalendar(${JSON.stringify(collection).replace(/'/g, "&#39;")})' title="Add all ${collection.dates ? collection.dates.length : 1} collection(s) to Outlook">
-                            📧 Outlook Calendar
-                        </button>
-                    </div>
                 `;
 
                 grid.appendChild(card);
