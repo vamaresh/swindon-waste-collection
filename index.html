@@ -467,6 +467,62 @@
             margin-left: 20px;
             font-size: 0.9em;
         }
+
+        .reminder-note {
+            margin: 12px 0 8px 0;
+            padding: 8px 12px;
+            background: #fef5e7;
+            border-left: 3px solid #f39c12;
+            color: #7d6608;
+            font-size: 0.85em;
+            border-radius: 4px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .action-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .install-app-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .enable-notifications-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .notifications-enabled {
+            background: #48bb78;
+            cursor: default;
+        }
+
+        .notifications-enabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
     </style>
 </head>
 <body>
@@ -547,6 +603,16 @@
             </h2>
             <div class="collections-grid" id="collectionsGrid"></div>
             
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button onclick="installPWA()" class="action-btn install-app-btn" id="installAppBtn" style="display: none;">
+                    📱 Install App
+                </button>
+                <button onclick="enableNotifications()" class="action-btn enable-notifications-btn" id="notificationBtn">
+                    🔔 Enable Reminders
+                </button>
+            </div>
+            
             <!-- Smart Assistant Info -->
             <div class="assistant-info">
                 <h3>🤖 Smart Assistant Integration</h3>
@@ -603,6 +669,117 @@
             }
         }
 
+        // PWA Install button (persistent)
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('App installed');
+                        document.getElementById('installAppBtn').style.display = 'none';
+                    }
+                    deferredPrompt = null;
+                });
+            } else {
+                alert('To install this app:\\n\\niOS: Tap Share → Add to Home Screen\\nAndroid: Tap Menu → Install App\\nDesktop: Look for install icon in address bar');
+            }
+        }
+
+        // Show install button when prompt is available
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installAppBtn').style.display = 'inline-flex';
+            if (!localStorage.getItem('installDismissed')) {
+                document.getElementById('installPrompt').classList.add('active');
+            }
+        });
+
+        // Browser Notifications
+        async function enableNotifications() {
+            const btn = document.getElementById('notificationBtn');
+            
+            if (!('Notification' in window)) {
+                alert('This browser does not support notifications.');
+                return;
+            }
+
+            if (Notification.permission === 'granted') {
+                alert('Notifications are already enabled! ✅\\n\\nYou will receive reminders at 7 PM the day before each collection.');
+                return;
+            }
+
+            if (Notification.permission === 'denied') {
+                alert('Notifications are blocked. Please enable them in your browser settings:\\n\\n1. Click the lock icon in the address bar\\n2. Find Notifications\\n3. Change to Allow');
+                return;
+            }
+
+            // Request permission
+            const permission = await Notification.requestPermission();
+            
+            if (permission === 'granted') {
+                btn.textContent = '✅ Reminders Enabled';
+                btn.classList.add('notifications-enabled');
+                
+                // Save to cache and schedule notifications
+                localStorage.setItem('notifications_enabled', 'true');
+                scheduleNotifications();
+                
+                // Show test notification
+                new Notification('🗑️ Swindon Waste Collections', {
+                    body: 'Reminders enabled! You will be notified at 7 PM the day before each collection.',
+                    icon: '/icons/icon-192x192.png'
+                });
+            } else {
+                alert('Notification permission denied. You can enable it later in browser settings.');
+            }
+        }
+
+        // Schedule notifications for all collection dates
+        function scheduleNotifications() {
+            if (!cachedCollections || cachedCollections.length === 0) return;
+            
+            const now = new Date();
+            
+            cachedCollections.forEach(collection => {
+                const dates = collection.dates || [collection.date];
+                
+                dates.forEach(dateStr => {
+                    const collectionDate = new Date(dateStr);
+                    const reminderDate = new Date(collectionDate);
+                    reminderDate.setDate(reminderDate.getDate() - 1);
+                    reminderDate.setHours(19, 0, 0, 0); // 7 PM day before
+                    
+                    const timeUntilReminder = reminderDate.getTime() - now.getTime();
+                    
+                    // Only schedule future notifications (within 24 hours for browser compatibility)
+                    if (timeUntilReminder > 0 && timeUntilReminder < 24 * 60 * 60 * 1000) {
+                        setTimeout(() => {
+                            if (Notification.permission === 'granted') {
+                                new Notification(`🗑️ ${collection.type}`, {
+                                    body: `Tomorrow is your ${collection.type} collection day. Don't forget to put your bins out!`,
+                                    icon: collection.bin_image || '/icons/icon-192x192.png',
+                                    badge: '/icons/icon-192x192.png',
+                                    tag: `collection-${dateStr}`,
+                                    requireInteraction: true
+                                });
+                            }
+                        }, timeUntilReminder);
+                    }
+                });
+            });
+        }
+
+        // Check notification status on load
+        function checkNotificationStatus() {
+            if (Notification.permission === 'granted') {
+                const btn = document.getElementById('notificationBtn');
+                btn.textContent = '✅ Reminders Enabled';
+                btn.classList.add('notifications-enabled');
+                scheduleNotifications();
+            }
+        }
+
         function dismissInstall() {
             localStorage.setItem('installDismissed', 'true');
             document.getElementById('installPrompt').classList.remove('active');
@@ -625,6 +802,7 @@
         // Initialize on page load
         window.addEventListener('DOMContentLoaded', () => {
             checkCache();
+            checkNotificationStatus();
         });
 
         // Check for cached data
@@ -840,9 +1018,15 @@
                 // Save to cache
                 const selectedAddress = addresses.find(a => a.uprn === uprn);
                 saveToCache(uprn, selectedAddress.address, data.collections);
+                cachedCollections = data.collections;
 
                 displayCollections(data.collections);
                 updateSteps(3);
+                
+                // Schedule notifications if enabled
+                if (Notification.permission === 'granted') {
+                    scheduleNotifications();
+                }
 
             } catch (error) {
                 console.error('[Frontend] Error:', error);
@@ -1051,14 +1235,12 @@ END:VEVENT
                 const daysText = getDaysText(collection.days_until);
                 const dateText = formatDate(collection.date);
 
-                // Display all future dates if available
+                // Display all future dates if available (skip first date as it's already shown)
                 let futureDatesHtml = '';
                 if (collection.dates && collection.dates.length > 1) {
-                    futureDatesHtml = '<div class="future-dates"><strong>Next collections:</strong><ul>';
+                    futureDatesHtml = '<div class="future-dates"><strong>Future collections:</strong><ul>';
                     collection.dates.forEach((date, index) => {
-                        if (index === 0) {
-                            futureDatesHtml += `<li>${formatDate(date)} (${getDaysText(Math.floor((new Date(date) - new Date()) / (1000 * 60 * 60 * 24)))})</li>`;
-                        } else {
+                        if (index > 0) {  // Skip first date (already shown above)
                             futureDatesHtml += `<li>${formatDate(date)}</li>`;
                         }
                     });
@@ -1073,15 +1255,16 @@ END:VEVENT
                         ${daysText}
                     </div>
                     ${futureDatesHtml}
+                    <div class="reminder-note">💡 Set up calendar reminders - notifications at 7 PM the day before</div>
                     <div class="calendar-buttons">
                         <button class="calendar-btn calendar-btn-google" onclick='addToGoogleCalendar(${JSON.stringify(collection).replace(/'/g, "&#39;")})' title="Add all ${collection.dates ? collection.dates.length : 1} collection(s) to Google Calendar">
-                            📅 Add Series
+                            📅 Google Calendar
                         </button>
                         <button class="calendar-btn calendar-btn-apple" onclick='downloadICS(${JSON.stringify(collection).replace(/'/g, "&#39;")})' title="Download calendar file with all ${collection.dates ? collection.dates.length : 1} collection(s)">
-                            🍎 Download
+                            🍎 Apple Calendar
                         </button>
                         <button class="calendar-btn calendar-btn-outlook" onclick='addToOutlookCalendar(${JSON.stringify(collection).replace(/'/g, "&#39;")})' title="Add all ${collection.dates ? collection.dates.length : 1} collection(s) to Outlook">
-                            📧 Add Series
+                            📧 Outlook Calendar
                         </button>
                     </div>
                 `;
