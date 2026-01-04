@@ -1074,6 +1074,8 @@
         // Populate address dropdown
         function populateAddresses() {
             const select = document.getElementById('addressSelect');
+            const btn = document.getElementById('addressBtn');
+            
             select.innerHTML = '<option value="">-- Choose your address --</option>';
 
             addresses.forEach((addr, index) => {
@@ -1083,11 +1085,11 @@
                 select.appendChild(option);
             });
 
-            // Enable continue button when address is selected
-            select.addEventListener('change', () => {
-                const btn = document.getElementById('addressBtn');
-                btn.disabled = !select.value;
-            });
+            // Reset button state
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Continue';
+            }
 
             showElement('addressCard');
         }
@@ -1106,10 +1108,13 @@
             btn.disabled = true;
             btn.textContent = 'Loading...';
 
-            await loadCollections(uprn);
-            
-            btn.disabled = false;
-            btn.textContent = 'Continue';
+            try {
+                await loadCollections(uprn);
+            } catch (error) {
+                console.error('[handleAddressSelect] Error:', error);
+                btn.disabled = false;
+                btn.textContent = 'Continue';
+            }
         }
 
         // Load collections for a UPRN
@@ -1622,6 +1627,14 @@ END:VEVENT
         document.getElementById('postcode').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 lookupPostcode();
+            }
+        });
+
+        // Handle address dropdown change - enable/disable Continue button
+        document.getElementById('addressSelect').addEventListener('change', (e) => {
+            const btn = document.getElementById('addressBtn');
+            if (btn) {
+                btn.disabled = !e.target.value;
             }
         });
 
