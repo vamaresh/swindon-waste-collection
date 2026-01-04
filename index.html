@@ -682,10 +682,13 @@
         <div class="card hidden" id="addressCard">
             <div class="form-group">
                 <label for="addressSelect">Select Your Address</label>
-                <select id="addressSelect" onchange="handleAddressSelect()">
+                <select id="addressSelect">
                     <option value="">-- Choose your address --</option>
                 </select>
             </div>
+            <button onclick="handleAddressSelect()" id="addressBtn" disabled>
+                Continue
+            </button>
         </div>
 
         <!-- Loading Spinner -->
@@ -1047,9 +1050,16 @@
                 }
 
                 addresses = data.addresses;
-                populateAddresses();
-                showSuccess(`Found ${addresses.length} address${addresses.length > 1 ? 'es' : ''}`);
-                updateSteps(2);
+                
+                // If only one address, auto-select and proceed
+                if (addresses.length === 1) {
+                    selectedUPRN = addresses[0].uprn;
+                    await loadCollections(addresses[0].uprn);
+                } else {
+                    populateAddresses();
+                    showSuccess(`Found ${addresses.length} addresses`);
+                    updateSteps(2);
+                }
 
             } catch (error) {
                 console.error('[Frontend] Error:', error);
@@ -1073,6 +1083,12 @@
                 select.appendChild(option);
             });
 
+            // Enable continue button when address is selected
+            select.addEventListener('change', () => {
+                const btn = document.getElementById('addressBtn');
+                btn.disabled = !select.value;
+            });
+
             showElement('addressCard');
         }
 
@@ -1081,8 +1097,23 @@
             const select = document.getElementById('addressSelect');
             const uprn = select.value;
 
-            if (!uprn) return;
+            if (!uprn) {
+                showError('Please select an address');
+                return;
+            }
 
+            const btn = document.getElementById('addressBtn');
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+
+            await loadCollections(uprn);
+            
+            btn.disabled = false;
+            btn.textContent = 'Continue';
+        }
+
+        // Load collections for a UPRN
+        async function loadCollections(uprn) {
             selectedUPRN = uprn;
             showLoading();
             
@@ -1115,7 +1146,7 @@
 
                 // Save to cache
                 const selectedAddress = addresses.find(a => a.uprn === uprn);
-                saveToCache(uprn, selectedAddress.address, data.collections);
+                saveToCache(uprn, selectedAddress ? selectedAddress.address : '', data.collections);
                 cachedCollections = data.collections;
 
                 displayCollections(data.collections);
@@ -1569,6 +1600,12 @@ END:VEVENT
         function reset() {
             document.getElementById('postcode').value = '';
             document.getElementById('addressSelect').innerHTML = '<option value="">-- Choose your address --</option>';
+            
+            const addressBtn = document.getElementById('addressBtn');
+            if (addressBtn) {
+                addressBtn.disabled = true;
+                addressBtn.textContent = 'Continue';
+            }
             
             hideElement('addressCard');
             hideElement('collectionsCard');
