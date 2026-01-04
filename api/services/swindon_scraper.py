@@ -174,27 +174,6 @@ class SwindonScraper:
                 
                 waste_type = waste_type_elem.get_text(strip=True)
                 
-                # Extract collection date
-                date_elem = section.find('span', class_='nextCollectionDate')
-                if not date_elem:
-                    continue
-                
-                date_text = date_elem.get_text(strip=True)
-                
-                # Parse date - format is typically "Day, DD Month YYYY"
-                try:
-                    collection_date = datetime.strptime(date_text, "%A, %d %B %Y").date()
-                except ValueError:
-                    # Try alternative format
-                    try:
-                        collection_date = datetime.strptime(date_text, "%d %B %Y").date()
-                    except ValueError:
-                        logger.warning(f"Could not parse date: {date_text}")
-                        continue
-                
-                # Calculate days until collection
-                days_until = (collection_date - today).days
-                
                 # Extract bin icon from bin-icons div
                 bin_image_url = None
                 bin_icons_div = section.find('div', class_='bin-icons')
@@ -211,14 +190,53 @@ class SwindonScraper:
                 icon = self.WASTE_TYPE_ICONS.get(waste_type, "trash-can")
                 color = self.WASTE_TYPE_COLORS.get(waste_type, "")
                 
-                collections.append({
-                    "date": collection_date.isoformat(),
-                    "type": waste_type,
-                    "icon": icon,
-                    "color": color,
-                    "days_until": days_until,
-                    "bin_image": bin_image_url  # Add actual bin image from website
-                })
+                # Collect all dates for this bin type
+                all_dates = []
+                
+                # Get next collection date
+                date_elem = section.find('span', class_='nextCollectionDate')
+                if date_elem:
+                    date_text = date_elem.get_text(strip=True)
+                    try:
+                        collection_date = datetime.strptime(date_text, "%A, %d %B %Y").date()
+                        all_dates.append(collection_date)
+                    except ValueError:
+                        try:
+                            collection_date = datetime.strptime(date_text, "%d %B %Y").date()
+                            all_dates.append(collection_date)
+                        except ValueError:
+                            logger.warning(f"Could not parse next date: {date_text}")
+                
+                # Get future collection dates
+                future_div = section.find('div', class_='collection-next')
+                if future_div:
+                    future_dates = future_div.find_all('span', class_=['even', 'odd'])
+                    for future_date_elem in future_dates:
+                        date_text = future_date_elem.get_text(strip=True)
+                        try:
+                            collection_date = datetime.strptime(date_text, "%A, %d %B %Y").date()
+                            all_dates.append(collection_date)
+                        except ValueError:
+                            try:
+                                collection_date = datetime.strptime(date_text, "%d %B %Y").date()
+                                all_dates.append(collection_date)
+                            except ValueError:
+                                logger.warning(f"Could not parse future date: {date_text}")
+                
+                # Create a collection entry with all dates
+                if all_dates:
+                    # Calculate days until first collection
+                    days_until = (all_dates[0] - today).days
+                    
+                    collections.append({
+                        "date": all_dates[0].isoformat(),  # Primary date (next collection)
+                        "dates": [d.isoformat() for d in all_dates],  # All dates
+                        "type": waste_type,
+                        "icon": icon,
+                        "color": color,
+                        "days_until": days_until,
+                        "bin_image": bin_image_url
+                    })
             
             # Sort by date
             collections.sort(key=lambda x: x['date'])
