@@ -143,15 +143,12 @@ class SwindonScraper:
             }
             
             logger.info(f"Fetching collections for UPRN {uprn}")
-            print(f"[SCRAPER] GET request to {self.COLLECTION_URL} with UPRN {uprn}")
             
             response = self._make_request(
                 self.COLLECTION_URL,
                 method="GET",
                 params=params
             )
-            
-            print(f"[SCRAPER] Response received, status: {response.status_code}")
             
             # Parse HTML response
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -183,7 +180,6 @@ class SwindonScraper:
                     for icon_class in self.BIN_ICON_IMAGES.keys():
                         if icon_class in classes:
                             bin_image_url = self.BIN_ICON_IMAGES[icon_class]
-                            print(f"[SCRAPER] Found bin icon: {icon_class} -> {bin_image_url}")
                             break
                 
                 # Get fallback icon and color for waste type
