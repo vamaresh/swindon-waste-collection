@@ -408,6 +408,114 @@
             background: #4a5568;
         }
 
+        /* Custom Address List Styles */
+        .address-search {
+            margin-bottom: 15px;
+        }
+
+        .address-search input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 0.95em;
+            font-family: inherit;
+        }
+
+        .address-search input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .address-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .address-item {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .address-item:last-child {
+            border-bottom: none;
+        }
+
+        .address-item:hover {
+            background: #f7fafc;
+        }
+
+        .address-item.selected {
+            background: #667eea;
+            color: white;
+        }
+
+        .address-item.selected:hover {
+            background: #5568d3;
+        }
+
+        .address-radio {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #cbd5e0;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .address-item.selected .address-radio {
+            border-color: white;
+            background: white;
+        }
+
+        .address-item.selected .address-radio::after {
+            content: '';
+            width: 10px;
+            height: 10px;
+            background: #667eea;
+            border-radius: 50%;
+        }
+
+        .address-text {
+            flex: 1;
+            font-size: 0.95em;
+            line-height: 1.4;
+        }
+
+        .no-addresses {
+            padding: 20px;
+            text-align: center;
+            color: #718096;
+            font-style: italic;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .address-list {
+                max-height: 350px;
+            }
+
+            .address-item {
+                padding: 12px;
+            }
+
+            .address-text {
+                font-size: 0.9em;
+            }
+        }
+
         .cached-info {
             background: #e6fffa;
             border: 2px solid #81e6d9;
@@ -681,10 +789,18 @@
         <!-- Step 2: Address Selector -->
         <div class="card hidden" id="addressCard">
             <div class="form-group">
-                <label for="addressSelect">Select Your Address</label>
-                <select id="addressSelect">
-                    <option value="">-- Choose your address --</option>
-                </select>
+                <label for="addressSearch">Select Your Address</label>
+                <div class="address-search">
+                    <input 
+                        type="text" 
+                        id="addressSearch" 
+                        placeholder="🔍 Search addresses..." 
+                        autocomplete="off"
+                    />
+                </div>
+                <div class="address-list" id="addressList">
+                    <!-- Addresses will be populated here -->
+                </div>
             </div>
             <button onclick="handleAddressSelect()" id="addressBtn" disabled>
                 Continue
@@ -1071,19 +1187,23 @@
             }
         }
 
-        // Populate address dropdown
+        // Populate address list
         function populateAddresses() {
-            const select = document.getElementById('addressSelect');
+            const list = document.getElementById('addressList');
             const btn = document.getElementById('addressBtn');
+            const searchInput = document.getElementById('addressSearch');
             
-            select.innerHTML = '<option value="">-- Choose your address --</option>';
+            // Clear previous content
+            list.innerHTML = '';
+            selectedUPRN = null;
 
-            addresses.forEach((addr, index) => {
-                const option = document.createElement('option');
-                option.value = addr.uprn;
-                option.textContent = addr.address;
-                select.appendChild(option);
-            });
+            if (addresses.length === 0) {
+                list.innerHTML = '<div class="no-addresses">No addresses found</div>';
+                return;
+            }
+
+            // Render all addresses
+            renderAddressList(addresses);
 
             // Reset button state
             if (btn) {
@@ -1091,15 +1211,64 @@
                 btn.textContent = 'Continue';
             }
 
+            // Clear search input
+            if (searchInput) {
+                searchInput.value = '';
+            }
+
             showElement('addressCard');
+        }
+
+        // Render address list items
+        function renderAddressList(addressesToRender) {
+            const list = document.getElementById('addressList');
+            list.innerHTML = '';
+
+            if (addressesToRender.length === 0) {
+                list.innerHTML = '<div class="no-addresses">No matching addresses found</div>';
+                return;
+            }
+
+            addressesToRender.forEach((addr) => {
+                const item = document.createElement('div');
+                item.className = 'address-item';
+                item.dataset.uprn = addr.uprn;
+                
+                item.innerHTML = `
+                    <div class="address-radio"></div>
+                    <div class="address-text">${addr.address}</div>
+                `;
+
+                item.addEventListener('click', () => selectAddress(addr.uprn));
+                list.appendChild(item);
+            });
+        }
+
+        // Select an address
+        function selectAddress(uprn) {
+            selectedUPRN = uprn;
+            const btn = document.getElementById('addressBtn');
+
+            // Update UI - remove selected class from all items
+            document.querySelectorAll('.address-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+
+            // Add selected class to clicked item
+            const selectedItem = document.querySelector(`[data-uprn="${uprn}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('selected');
+            }
+
+            // Enable continue button
+            if (btn) {
+                btn.disabled = false;
+            }
         }
 
         // Handle address selection
         async function handleAddressSelect() {
-            const select = document.getElementById('addressSelect');
-            const uprn = select.value;
-
-            if (!uprn) {
+            if (!selectedUPRN) {
                 showError('Please select an address');
                 return;
             }
@@ -1109,7 +1278,7 @@
             btn.textContent = 'Loading...';
 
             try {
-                await loadCollections(uprn);
+                await loadCollections(selectedUPRN);
             } catch (error) {
                 console.error('[handleAddressSelect] Error:', error);
                 btn.disabled = false;
@@ -1630,11 +1799,24 @@ END:VEVENT
             }
         });
 
-        // Handle address dropdown change - enable/disable Continue button
-        document.getElementById('addressSelect').addEventListener('change', (e) => {
-            const btn = document.getElementById('addressBtn');
-            if (btn) {
-                btn.disabled = !e.target.value;
+        // Handle address search filtering
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('addressSearch');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase().trim();
+                    
+                    if (!searchTerm) {
+                        renderAddressList(addresses);
+                        return;
+                    }
+
+                    const filteredAddresses = addresses.filter(addr => 
+                        addr.address.toLowerCase().includes(searchTerm)
+                    );
+
+                    renderAddressList(filteredAddresses);
+                });
             }
         });
 
