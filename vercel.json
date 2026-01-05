@@ -7,6 +7,10 @@
     {
       "src": "/api/collections/(.*)",
       "dest": "/api/waste_collections.py"
+    },
+    {
+      "src": "/api/waste-collections/(.*)",
+      "dest": "/api/waste_collections.py"
     }
   ]
 }
