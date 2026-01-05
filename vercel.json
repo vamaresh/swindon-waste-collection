@@ -1,8 +1,1 @@
-{
-  "routes": [
-    {
-      "src": "/api/waste-collections/(.*)",
-      "dest": "/api/waste-collections.py"
-    }
-  ]
-}
+{}
