@@ -25,13 +25,11 @@ class handler(BaseHTTPRequestHandler):
     
     def do_GET(self):
         """Handle GET request"""
-        print(f"[COLLECTIONS] GET request received: {self.path}")
         try:
             # Extract UPRN from path
             # Path will be like /api/collections or /api/collections/123456
             path = self.path
             parts = path.split('/')
-            print(f"[COLLECTIONS] Path parts: {parts}")
             
             # Find UPRN in path
             uprn = None
@@ -40,25 +38,20 @@ class handler(BaseHTTPRequestHandler):
                     uprn = part
                     break
             
-            print(f"[COLLECTIONS] Extracted UPRN: {uprn}")
             if not uprn:
-                print("[COLLECTIONS] No UPRN found in path")
                 self.send_error_response(400, "Missing UPRN in path")
                 return
             
             # Fetch collections
             scraper = SwindonScraper()
             try:
-                print(f"[COLLECTIONS] Fetching collections for UPRN: {uprn}")
                 collections = scraper.get_collections(uprn)
-                print(f"[COLLECTIONS] Found {len(collections)} collections")
                 
                 response_data = {
                     "collections": collections,
                     "uprn": uprn
                 }
                 
-                print(f"[COLLECTIONS] Sending success response")
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', '*')

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Swindon Waste Collections</title>
+    <title>Swindon Bin Collections</title>
     <meta name="description" content="Check your waste collection schedule for Swindon Borough Council">
     <meta name="theme-color" content="#667eea">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1300,7 +1300,20 @@
                 const response = await fetch(url);
                 console.log('[Frontend] Response status:', response.status);
                 
-                const data = await response.json();
+                // Get response text first to debug
+                const responseText = await response.text();
+                console.log('[Frontend] Raw response:', responseText);
+                
+                // Try to parse JSON
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('[Frontend] JSON Parse Error:', parseError);
+                    console.error('[Frontend] Response text:', responseText);
+                    showError('Invalid response from server. Please try again.');
+                    return;
+                }
                 console.log('[Frontend] Response data:', data);
 
                 if (!response.ok) {
