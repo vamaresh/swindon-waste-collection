@@ -737,8 +737,9 @@
         <div class="header">
             <h1>
                 <span class="header-icon">🗑️</span>
-                Swindon Bin Dates
+                Swindon Waste Collections
             </h1>
+            <p>Check your waste collection schedule</p>
         </div>
 
         <!-- Step Indicator -->
@@ -1357,7 +1358,6 @@
                 displayCollections(cachedCollections);
                 hideElement('postcodeCard');
                 hideElement('addressCard');
-                hideElement('step-indicator');
                 updateSteps(3);
             }
         }
@@ -1744,8 +1744,6 @@ END:VEVENT
 
             hideElement('postcodeCard');
             hideElement('addressCard');
-            const stepIndicator = document.querySelector('.step-indicator');
-            if (stepIndicator) stepIndicator.style.display = 'none';
             showElement('collectionsCard');
         }
 
@@ -1788,39 +1786,13 @@ END:VEVENT
         // Reset form
         function reset() {
             document.getElementById('postcode').value = '';
-            
-            // Clear address list instead of select dropdown
-            const addressList = document.getElementById('addressList');
-            if (addressList) {
-                addressList.innerHTML = '';
-            }
-            
-            // Clear search input
-            const addressSearch = document.getElementById('addressSearch');
-            if (addressSearch) {
-                addressSearch.value = '';
-            }
+            document.getElementById('addressSelect').innerHTML = '<option value="">-- Choose your address --</option>';
             
             const addressBtn = document.getElementById('addressBtn');
             if (addressBtn) {
                 addressBtn.disabled = true;
                 addressBtn.textContent = 'Continue';
             }
-            
-            hideElement('addressCard');
-            hideElement('collectionsCard');
-            hideElement('cachedInfo');
-            showElement('postcodeCard');
-            
-            // Show step indicator again
-            const stepIndicator = document.querySelector('.step-indicator');
-            if (stepIndicator) stepIndicator.style.display = 'flex';
-            
-            addresses = [];
-            selectedUPRN = null;
-            cachedCollections = null;
-            updateSteps(1);
-        }
             
             hideElement('addressCard');
             hideElement('collectionsCard');
