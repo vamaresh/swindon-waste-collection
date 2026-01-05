@@ -1,7 +1,7 @@
 """
-Collections endpoint
+Collections endpoint for Vercel serverless function
 
-GET /api/waste-collections/[uprn]
+GET /api/waste-collections?uprn=[uprn]
 Response: { "collections": [...], "uprn": "..." }
 """
 
@@ -9,30 +9,14 @@ from http.server import BaseHTTPRequestHandler
 import json
 import sys
 import os
+from urllib.parse import urlparse, parse_qs
 
-# Add parent directories to path to import services
+# Setup paths for imports
 current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-grandparent_dir = os.path.dirname(parent_dir)
-sys.path.insert(0, parent_dir)
-sys.path.insert(0, grandparent_dir)
+sys.path.insert(0, current_dir)
 
-try:
-    from api.services.swindon_scraper import SwindonScraper, SwindonScraperError
-except ImportError:
-    try:
-        from services.swindon_scraper import SwindonScraper, SwindonScraperError
-    except ImportError:
-        # When running in Vercel
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "swindon_scraper",
-            os.path.join(parent_dir, "services", "swindon_scraper.py")
-        )
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        SwindonScraper = module.SwindonScraper
-        SwindonScraperError = module.SwindonScraperError
+# Import scraper
+from services.swindon_scraper import SwindonScraper, SwindonScraperError
 
 
 class handler(BaseHTTPRequestHandler):
@@ -41,20 +25,23 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET request"""
         try:
-            # Extract UPRN from path
-            # Path will be like /api/collections or /api/collections/123456
-            path = self.path
-            parts = path.split('/')
+            # Parse URL to get query parameters or path
+            parsed_url = urlparse(self.path)
+            query_params = parse_qs(parsed_url.query)
             
-            # Find UPRN in path
-            uprn = None
-            for part in reversed(parts):
-                if part and part.isdigit():
-                    uprn = part
-                    break
+            # Try to get UPRN from query parameter first
+            uprn = query_params.get('uprn', [None])[0]
+            
+            # If not in query, try to extract from path
+            if not uprn:
+                parts = parsed_url.path.split('/')
+                for part in reversed(parts):
+                    if part and part.isdigit():
+                        uprn = part
+                        break
             
             if not uprn:
-                self.send_error_response(400, "Missing UPRN in path")
+                self.send_error_response(400, "Missing UPRN in path or query")
                 return
             
             # Fetch collections
