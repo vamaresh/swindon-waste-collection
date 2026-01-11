@@ -1,8 +1,1 @@
-{
-	"rewrites": [
-		{
-			"source": "/api/collections/:uprn",
-			"destination": "/api/waste_collections/:uprn"
-		}
-	]
-}
+{}
