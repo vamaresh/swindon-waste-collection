@@ -2,7 +2,7 @@
 	"rewrites": [
 		{
 			"source": "/api/collections/:uprn",
-			"destination": "/api/waste-collections/:uprn"
+			"destination": "/api/waste_collections/:uprn"
 		}
 	]
 }
