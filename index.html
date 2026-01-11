@@ -49,25 +49,6 @@
             gap: 15px;
         }
 
-        .start-over-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 8px 12px;
-            background: #e2e8f0;
-            color: #4a5568;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.9em;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .start-over-btn:hover {
-            background: #cbd5e0;
-            transform: scale(1.05);
-        }
-
         .header-icon {
             font-size: 1.2em;
         }
@@ -763,9 +744,6 @@
                 <span class="header-icon">🗑️</span>
                 Swindon Bin Dates
             </h1>
-            <button onclick="startOver()" class="start-over-btn" title="Start Over - Clear cache and reset">
-                🔄 Start Over
-            </button>
         </div>
 
         <!-- Step Indicator -->
@@ -1070,14 +1048,6 @@
             checkCache();
             checkNotificationStatus();
         });
-
-        // Start over - clear cache and reset to initial state
-        function startOver() {
-            if (confirm('This will clear your saved data and reset the app. Continue?')) {
-                clearCache();
-                location.reload();
-            }
-        }
 
         // Check for cached data
         function checkCache() {
