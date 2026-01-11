@@ -1015,7 +1015,7 @@
                     const collectionDate = new Date(dateStr);
                     const reminderDate = new Date(collectionDate);
                     reminderDate.setDate(reminderDate.getDate() - 1);
-                    reminderDate.setHours(17, 0, 0, 0); // 5 PM day before
+                    reminderDate.setHours(16, 0, 0, 0); // 4 PM day before
                     
                     const timeUntilReminder = reminderDate.getTime() - now.getTime();
                     
@@ -1446,7 +1446,7 @@ METHOD:PUBLISH
                 const collectionDate = new Date(dateStr);
                 const reminderDate = new Date(collectionDate);
                 reminderDate.setDate(reminderDate.getDate() - 1);
-                reminderDate.setHours(17, 0, 0, 0); // 5 PM day before
+                reminderDate.setHours(16, 0, 0, 0); // 4 PM day before
 
                 ics += `BEGIN:VEVENT
 UID:${dateStr}-${collection.type.replace(/\s/g, '-')}-${index}@swindon-waste.app
@@ -1501,7 +1501,7 @@ METHOD:PUBLISH
                     const collectionDate = new Date(dateStr);
                     const reminderDate = new Date(collectionDate);
                     reminderDate.setDate(reminderDate.getDate() - 1);
-                    reminderDate.setHours(17, 0, 0, 0); // 5 PM day before
+                    reminderDate.setHours(16, 0, 0, 0); // 4 PM day before
 
                     ics += `BEGIN:VEVENT
 UID:${dateStr}-${collection.type.replace(/\s/g, '-')}-${index}@swindon-waste.app
@@ -1562,7 +1562,7 @@ END:VEVENT
                         const collectionDate = new Date(dateStr);
                         const reminderDate = new Date(collectionDate);
                         reminderDate.setDate(reminderDate.getDate() - 1);
-                        reminderDate.setHours(17, 0, 0, 0); // 5 PM day before
+                        reminderDate.setHours(16, 0, 0, 0); // 4 PM day before
 
                         const formatGoogleDate = (date) => {
                             return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
@@ -1609,7 +1609,7 @@ END:VEVENT
                         const collectionDate = new Date(dateStr);
                         const reminderDate = new Date(collectionDate);
                         reminderDate.setDate(reminderDate.getDate() - 1);
-                        reminderDate.setHours(17, 0, 0, 0); // 5 PM day before
+                        reminderDate.setHours(16, 0, 0, 0); // 4 PM day before
 
                         const formatOutlookDate = (date) => {
                             return date.toISOString();
@@ -1791,9 +1791,12 @@ END:VEVENT
                         <div class="collection-date">📅 ${dateText}</div>
                         <div class="collection-days ${getDaysClass(collection.days_until)}">${daysText}</div>
                     </div>
-                    <div style="margin-top:10px; display:flex; justify-content:center;">
+                    <div style="margin-top:10px; display:flex; justify-content:center; gap:8px;">
                         <button class="notify-btn" onclick='enableNotifications(${JSON.stringify(collection).replace(/'/g, "&#39;")})'>
                             🔔 Notify Me
+                        </button>
+                        <button class="test-btn" onclick='testNotification(${JSON.stringify(collection).replace(/'/g, "&#39;")})'>
+                            🧪 Test
                         </button>
                     </div>
                     ${futureDatesHtml}
@@ -1997,7 +2000,7 @@ END:VEVENT
             const collectionDate = new Date(collection.date);
             const reminderDate = new Date(collectionDate);
             reminderDate.setDate(reminderDate.getDate() - 1);
-            reminderDate.setHours(17, 0, 0, 0); // 5 PM day before
+            reminderDate.setHours(16, 0, 0, 0); // 4 PM day before
 
             const now = new Date();
             const timeUntilReminder = reminderDate.getTime() - now.getTime();
@@ -2014,6 +2017,69 @@ END:VEVENT
                         });
                     }
                 }, timeUntilReminder);
+            }
+        }
+
+        // Test notification function - triggers notification immediately for testing
+        async function testNotification(collection) {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+
+            try {
+                // Test OneSignal first
+                if (window.OneSignalDeferred && ONESIGNAL_APP_ID !== 'YOUR_ONESIGNAL_APP_ID') {
+                    window.OneSignalDeferred.push(async function(OneSignal) {
+                        try {
+                            // Send a test notification immediately
+                            await OneSignal.Notifications.requestPermission();
+                            alert('✅ OneSignal test notification sent! Check your notifications.');
+                            btn.disabled = false;
+                            btn.textContent = '🔔 Test Sent';
+                        } catch (error) {
+                            console.error('OneSignal test failed:', error);
+                            // Fall back to browser notification
+                            testBrowserNotification(collection);
+                        }
+                    });
+                } else {
+                    // Test browser notification
+                    testBrowserNotification(collection);
+                }
+            } catch (error) {
+                console.error('Test notification failed:', error);
+                alert('❌ Test failed. Check console for details.');
+                btn.disabled = false;
+                btn.textContent = '🔔 Test Failed';
+            }
+        }
+
+        // Test browser notification immediately
+        function testBrowserNotification(collection) {
+            if ('Notification' in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        // Show test notification immediately
+                        new Notification(`🔔 Test: ${collection.type}`, {
+                            body: `This is a test notification for your ${collection.type} collection. Real notifications will arrive at 4 PM the day before.`,
+                            icon: '/icon-192x192.png',
+                            badge: '/icon-192x192.png',
+                            tag: 'test-notification',
+                            requireInteraction: true
+                        });
+                        alert('✅ Browser test notification sent! Check your notifications.');
+                        event.target.disabled = false;
+                        event.target.textContent = '🔔 Test Sent';
+                    } else {
+                        alert('⚠️ Notification permission denied.');
+                        event.target.disabled = false;
+                        event.target.textContent = '🔔 Test Failed';
+                    }
+                });
+            } else {
+                alert('❌ This browser does not support notifications.');
+                event.target.disabled = false;
+                event.target.textContent = '🔔 Test Failed';
             }
         }
 
