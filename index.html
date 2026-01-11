@@ -9,7 +9,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" href="/icon-192x192.png">
     <style>
         * {
             margin: 0;
@@ -861,9 +861,7 @@
                         allowLocalhostAsSecureOrigin: true,
                         notifyButton: {
                             enable: false
-                        },
-                        serviceWorkerPath: 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js',
-                        serviceWorkerUpdaterPath: 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js'
+                        }
                     });
                     console.log('OneSignal initialized for waste collection reminders');
                 });
@@ -952,7 +950,7 @@
                 // Show test notification
                 new Notification('🗑️ Swindon Waste Collections', {
                     body: 'Reminders enabled! You will be notified at 5 PM the day before each collection.',
-                    icon: '/icons/icon-192x192.png'
+                    icon: '/icon-192x192.png'
                 });
             } else {
                 alert('Notification permission denied. You can enable it later in browser settings.');
@@ -982,8 +980,8 @@
                             if (Notification.permission === 'granted') {
                                 new Notification(`🗑️ ${collection.type}`, {
                                     body: `Tomorrow is your ${collection.type} collection day. Don't forget to put your bins out!`,
-                                    icon: collection.bin_image || '/icons/icon-192x192.png',
-                                    badge: '/icons/icon-192x192.png',
+                                    icon: collection.bin_image || '/icon-192x192.png',
+                                    badge: '/icon-192x192.png',
                                     tag: `collection-${dateStr}`,
                                     requireInteraction: true
                                 });
@@ -1966,8 +1964,8 @@ END:VEVENT
                     if (Notification.permission === 'granted') {
                         new Notification(`🗑️ ${collection.type}`, {
                             body: `Tomorrow is your ${collection.type} collection day. Don't forget to put your bins out!`,
-                            icon: '/icons/icon-192x192.png',
-                            badge: '/icons/icon-192x192.png',
+                            icon: '/icon-192x192.png',
+                            badge: '/icon-192x192.png',
                             tag: `collection-${collection.date}`,
                             requireInteraction: true
                         });
