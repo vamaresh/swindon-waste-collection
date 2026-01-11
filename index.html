@@ -6,7 +6,7 @@
     <title>Swindon Bin Collections</title>
     <meta name="description" content="Check your waste collection schedule for Swindon Borough Council">
     <meta name="theme-color" content="#667eea">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
@@ -1007,8 +1007,8 @@
             document.getElementById('installPrompt').classList.remove('active');
         }
 
-        // Register Service Worker
-        if ('serviceWorker' in navigator) {
+        // Register Service Worker (only if OneSignal is not configured)
+        if ('serviceWorker' in navigator && (!ONESIGNAL_APP_ID || ONESIGNAL_APP_ID === 'YOUR_ONESIGNAL_APP_ID')) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
                     .then(reg => console.log('Service Worker registered'))
