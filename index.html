@@ -242,7 +242,8 @@
         .collection-date {
             font-size: 1.1em;
             color: #4a5568;
-            margin-bottom: 10px;
+            margin-bottom: 0;
+            display: inline-block;
         }
 
         .collection-days {
@@ -633,21 +634,21 @@
         }
 
         .add-calendar-btn {
-            padding: 6px 12px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 0.85em;
+            padding: 8px 14px;
+            background: white;
+            color: #1a202c; /* dark text */
+            border: 2px solid #667eea; /* blue border */
+            border-radius: 8px;
+            font-size: 0.95em;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
         }
 
         .add-calendar-btn:hover {
-            background: #5568d3;
+            background: #f7fafc; /* slight grey on hover */
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 6px 14px rgba(102, 126, 234, 0.12);
         }
 
         .calendar-modal {
@@ -1116,6 +1117,7 @@
 
         // Lookup postcode
         async function lookupPostcode() {
+            console.log('[Frontend] lookupPostcode called');
             const postcode = document.getElementById('postcode').value.trim().toUpperCase();
             
             if (!postcode) {
@@ -1293,7 +1295,8 @@
             console.log('[Frontend] Fetching collections for UPRN:', uprn);
 
             try {
-                const url = `${API_BASE}/waste-collections?uprn=${uprn}`;
+                // Backend exposes collections at /api/collections/<uprn>
+                const url = `${API_BASE}/collections/${uprn}`;
                 console.log('[Frontend] Calling API:', url);
                 
                 const response = await fetch(url);
@@ -1727,11 +1730,11 @@ END:VEVENT
                 card.innerHTML = `
                     <div class="collection-icon">${iconHtml}</div>
                     <div class="collection-type">${collection.type}</div>
-                    <div class="collection-date">📅 ${dateText}</div>
-                    <div style="display: flex; align-items: center; gap: 10px; justify-content: center; margin-top: 10px;">
-                        <div class="collection-days ${getDaysClass(collection.days_until)}">
-                            ${daysText}
-                        </div>
+                    <div style="display:flex; align-items:center; gap:10px; justify-content:center; margin-top:6px;">
+                        <div class="collection-date">📅 ${dateText}</div>
+                        <div class="collection-days ${getDaysClass(collection.days_until)}">${daysText}</div>
+                    </div>
+                    <div style="margin-top:10px; display:flex; justify-content:center;">
                         <button class="add-calendar-btn" onclick='showCalendarOptions(${JSON.stringify(collection).replace(/'/g, "&#39;")})'>
                             + Add to Calendar
                         </button>
@@ -1815,17 +1818,6 @@ END:VEVENT
             // Show step indicator again
             const stepIndicator = document.querySelector('.step-indicator');
             if (stepIndicator) stepIndicator.style.display = 'flex';
-            
-            addresses = [];
-            selectedUPRN = null;
-            cachedCollections = null;
-            updateSteps(1);
-        }
-            
-            hideElement('addressCard');
-            hideElement('collectionsCard');
-            hideElement('cachedInfo');
-            showElement('postcodeCard');
             
             addresses = [];
             selectedUPRN = null;
