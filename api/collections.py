@@ -26,20 +26,13 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET request"""
         try:
-            # Extract UPRN from path
-            # Path will be like /api/collections or /api/collections/123456
-            path = self.path
-            parts = path.split('/')
-            
-            # Find UPRN in path
-            uprn = None
-            for part in reversed(parts):
-                if part and part.isdigit():
-                    uprn = part
-                    break
+            # Extract UPRN from query parameters
+            parsed_url = urlparse(self.path)
+            query_params = parse_qs(parsed_url.query)
+            uprn = query_params.get('uprn', [None])[0]
             
             if not uprn:
-                self.send_error_response(400, "Missing UPRN in path")
+                self.send_error_response(400, "Missing UPRN parameter")
                 return
             
             # Fetch collections
