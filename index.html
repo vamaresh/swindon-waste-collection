@@ -1867,6 +1867,7 @@ END:VEVENT
 
             try {
                 if (window.OneSignalDeferred && ONESIGNAL_APP_ID !== 'YOUR_ONESIGNAL_APP_ID') {
+                    // OneSignal is configured - use it for notifications
                     window.OneSignalDeferred.push(async function(OneSignal) {
                         try {
                             // Request notification permission
@@ -1880,8 +1881,12 @@ END:VEVENT
                                     uprn: selectedUPRN
                                 });
 
+                                // Calculate reminder date (1 day before collection)
+                                const reminderDate = new Date(collection.date);
+                                reminderDate.setDate(reminderDate.getDate() - 1);
+
                                 // Show success message
-                                alert(`✅ Notifications enabled!\n\nYou'll receive reminders for your ${collection.type} collection on ${formatDate(collection.date)}.`);
+                                alert(`✅ Notifications enabled!\n\nYou'll receive a reminder for your ${collection.type} collection at 5 PM on ${formatDate(reminderDate.toISOString().split('T')[0])} (1 day before).`);
 
                                 // Update button
                                 btn.textContent = '🔔 Enabled';
@@ -1905,11 +1910,16 @@ END:VEVENT
                         }
                     });
                 } else {
-                    // Fallback to browser notifications
+                    // OneSignal not configured - fallback to browser notifications
+                    console.warn('OneSignal not configured (app ID is placeholder). Using browser notifications as fallback.');
                     if ('Notification' in window) {
                         const permission = await Notification.requestPermission();
                         if (permission === 'granted') {
-                            alert(`✅ Browser notifications enabled!\n\nYou'll receive reminders for your ${collection.type} collection on ${formatDate(collection.date)}.`);
+                            // Calculate reminder date (1 day before collection)
+                            const reminderDate = new Date(collection.date);
+                            reminderDate.setDate(reminderDate.getDate() - 1);
+
+                            alert(`✅ Browser notifications enabled!\n\nYou'll receive a reminder for your ${collection.type} collection at 5 PM on ${formatDate(reminderDate.toISOString().split('T')[0])} (1 day before).`);
 
                             btn.textContent = '🔔 Enabled';
                             btn.classList.add('enabled');
