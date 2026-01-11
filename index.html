@@ -651,85 +651,67 @@
             box-shadow: 0 6px 14px rgba(102, 126, 234, 0.12);
         }
 
-        .calendar-modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            align-items: center;
-            justify-content: center;
-        }
-
-        .calendar-modal.active {
-            display: flex;
-        }
-
-        .calendar-modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            max-width: 400px;
-            width: 90%;
-        }
-
-        .calendar-modal-content h3 {
-            margin-top: 0;
-            margin-bottom: 20px;
-            color: #2d3748;
-            text-align: center;
-        }
-
-        .calendar-options {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .calendar-option-btn {
-            padding: 15px;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            background: white;
-            color: #2d3748;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 1em;
-            font-weight: 600;
-        }
-
-        .calendar-option-btn:hover {
-            border-color: #667eea;
-            background: #f7fafc;
-            transform: translateX(5px);
-        }
-
-        .calendar-option-btn .icon {
-            font-size: 1.5em;
-        }
-
-        .modal-close {
-            margin-top: 20px;
-            padding: 10px;
-            background: #e2e8f0;
-            color: #2d3748;
-            border: none;
+        .assistant-expander {
+            margin-top: 15px;
+            border: 1px solid #e2e8f0;
             border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            font-weight: 600;
+            background: #f8fafc;
         }
 
-        .modal-close:hover {
-            background: #cbd5e0;
+        .assistant-summary {
+            padding: 12px 16px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #2d3748;
+            list-style: none;
+            user-select: none;
         }
+
+        .assistant-summary:hover {
+            background: #edf2f7;
+        }
+
+        .assistant-summary::marker {
+            content: "▶ ";
+            color: #667eea;
+        }
+
+        .assistant-expander[open] .assistant-summary::marker {
+            content: "▼ ";
+        }
+
+        .assistant-content {
+            padding: 0 16px 16px 16px;
+            border-top: 1px solid #e2e8f0;
+            margin-top: 8px;
+        }
+
+        .notify-btn {
+            padding: 8px 14px;
+            background: #48bb78;
+            color: white;
+            border: 2px solid #48bb78;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .notify-btn:hover {
+            background: #38a169;
+            border-color: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(72, 187, 120, 0.3);
+        }
+
+        .notify-btn.enabled {
+            background: #2f855a;
+            border-color: #2f855a;
+            cursor: default;
+        }
+
+
     </style>
 </head>
 <body>
@@ -831,16 +813,18 @@
             </div>
             
             <!-- Smart Assistant Info -->
-            <div class="assistant-info">
-                <h3>🤖 Smart Assistant Integration</h3>
-                <p><strong>To get voice reminders on Alexa or Google Assistant:</strong></p>
-                <ul>
-                    <li><strong>Google Assistant:</strong> Add reminders to Google Calendar (click buttons above), then Google Assistant will notify you automatically</li>
-                    <li><strong>Alexa:</strong> Link your Google or Outlook calendar to Alexa in the Alexa app (Settings → Calendar → Link calendar)</li>
-                    <li><strong>Siri:</strong> Add to Apple Calendar, Siri will automatically remind you</li>
-                </ul>
-                <p style="margin-top: 10px;">💡 All calendar reminders are set for <strong>1 day before</strong> collection at 5:00 PM</p>
-            </div>
+            <details class="assistant-expander">
+                <summary class="assistant-summary">🤖 Smart Assistant Integration</summary>
+                <div class="assistant-content">
+                    <p><strong>To get voice reminders on Alexa or Google Assistant:</strong></p>
+                    <ul>
+                        <li><strong>Google Assistant:</strong> Add reminders to Google Calendar (click buttons above), then Google Assistant will notify you automatically</li>
+                        <li><strong>Alexa:</strong> Link your Google or Outlook calendar to Alexa in the Alexa app (Settings → Calendar → Link calendar)</li>
+                        <li><strong>Siri:</strong> Add to Apple Calendar, Siri will automatically remind you</li>
+                    </ul>
+                    <p style="margin-top: 10px;">💡 All calendar reminders are set for <strong>1 day before</strong> collection at 5:00 PM</p>
+                </div>
+            </details>
 
             <button onclick="clearCache()" class="btn change-address-btn">
                 Change Address
@@ -852,6 +836,7 @@
         </p>
     </div>
 
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
         // Configuration
         const API_BASE = '/api';
@@ -862,6 +847,26 @@
         let selectedUPRN = null;
         let cachedCollections = null;
         let deferredPrompt = null;
+
+        // OneSignal App ID - Replace with your actual OneSignal App ID
+        const ONESIGNAL_APP_ID = 'YOUR_ONESIGNAL_APP_ID';
+
+        // Initialize OneSignal
+        window.addEventListener('load', function() {
+            if (ONESIGNAL_APP_ID && ONESIGNAL_APP_ID !== 'YOUR_ONESIGNAL_APP_ID') {
+                window.OneSignalDeferred = window.OneSignalDeferred || [];
+                window.OneSignalDeferred.push(async function(OneSignal) {
+                    await OneSignal.init({
+                        appId: ONESIGNAL_APP_ID,
+                        allowLocalhostAsSecureOrigin: true,
+                        notifyButton: {
+                            enable: false
+                        }
+                    });
+                    console.log('OneSignal initialized for waste collection reminders');
+                });
+            }
+        });
 
         // PWA Install Prompt
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -1734,8 +1739,8 @@ END:VEVENT
                         <div class="collection-days ${getDaysClass(collection.days_until)}">${daysText}</div>
                     </div>
                     <div style="margin-top:10px; display:flex; justify-content:center;">
-                        <button class="add-calendar-btn" onclick='showCalendarOptions(${JSON.stringify(collection).replace(/'/g, "&#39;")})'>
-                            + Add to Calendar
+                        <button class="notify-btn" onclick='enableNotifications(${JSON.stringify(collection).replace(/'/g, "&#39;")})'>
+                            🔔 Notify Me
                         </button>
                     </div>
                     ${futureDatesHtml}
@@ -1852,131 +1857,122 @@ END:VEVENT
             }
         });
 
-        // Calendar Modal Functions
-        let selectedCollection = null;
 
-        function showCalendarOptions(collection) {
-            selectedCollection = collection;
-            const modal = document.getElementById('calendarModal');
-            modal.classList.add('active');
-        }
 
-        function closeCalendarModal(event) {
-            if (event && event.target !== event.currentTarget) return;
-            const modal = document.getElementById('calendarModal');
-            modal.classList.remove('active');
-            selectedCollection = null;
-        }
+        // Enable notifications for waste collection reminders
+        async function enableNotifications(collection) {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Enabling...';
 
-        function selectCalendar(type) {
-            if (!selectedCollection) return;
+            try {
+                if (window.OneSignalDeferred && ONESIGNAL_APP_ID !== 'YOUR_ONESIGNAL_APP_ID') {
+                    window.OneSignalDeferred.push(async function(OneSignal) {
+                        try {
+                            // Request notification permission
+                            const permission = await OneSignal.Notifications.requestPermission();
+                            
+                            if (permission) {
+                                // Tag user with collection info for targeted notifications
+                                await OneSignal.User.addTags({
+                                    waste_collection_type: collection.type,
+                                    collection_date: collection.date,
+                                    uprn: selectedUPRN
+                                });
 
-            if (type === 'google') {
-                addSingleToGoogleCalendar(selectedCollection);
-            } else if (type === 'apple' || type === 'outlook') {
-                downloadSingleICS(selectedCollection, type);
+                                // Show success message
+                                alert(`✅ Notifications enabled!\n\nYou'll receive reminders for your ${collection.type} collection on ${formatDate(collection.date)}.`);
+
+                                // Update button
+                                btn.textContent = '🔔 Enabled';
+                                btn.classList.add('enabled');
+                                btn.disabled = true;
+
+                                // Store notification preference
+                                localStorage.setItem('notifications_enabled', 'true');
+                                localStorage.setItem('notification_uprn', selectedUPRN);
+
+                            } else {
+                                alert('⚠️ Notification permission denied. You can enable it later in browser settings.');
+                                btn.disabled = false;
+                                btn.textContent = '🔔 Notify Me';
+                            }
+                        } catch (error) {
+                            console.error('OneSignal setup failed:', error);
+                            alert('❌ Failed to enable notifications. Please try again.');
+                            btn.disabled = false;
+                            btn.textContent = '🔔 Notify Me';
+                        }
+                    });
+                } else {
+                    // Fallback to browser notifications
+                    if ('Notification' in window) {
+                        const permission = await Notification.requestPermission();
+                        if (permission === 'granted') {
+                            alert(`✅ Browser notifications enabled!\n\nYou'll receive reminders for your ${collection.type} collection on ${formatDate(collection.date)}.`);
+
+                            btn.textContent = '🔔 Enabled';
+                            btn.classList.add('enabled');
+                            btn.disabled = true;
+
+                            localStorage.setItem('notifications_enabled', 'true');
+                            localStorage.setItem('notification_uprn', selectedUPRN);
+
+                            // Schedule browser notification
+                            scheduleBrowserNotification(collection);
+                        } else {
+                            alert('⚠️ Notification permission denied.');
+                            btn.disabled = false;
+                            btn.textContent = '🔔 Notify Me';
+                        }
+                    } else {
+                        alert('❌ This browser does not support notifications.');
+                        btn.disabled = false;
+                        btn.textContent = '🔔 Notify Me';
+                    }
+                }
+            } catch (error) {
+                console.error('Notification setup failed:', error);
+                alert('❌ Failed to enable notifications. Please try again.');
+                btn.disabled = false;
+                btn.textContent = '🔔 Notify Me';
             }
-
-            closeCalendarModal();
         }
 
-        // Add single collection date to Google Calendar
-        function addSingleToGoogleCalendar(collection) {
+        // Schedule browser notification as fallback
+        function scheduleBrowserNotification(collection) {
             const collectionDate = new Date(collection.date);
             const reminderDate = new Date(collectionDate);
             reminderDate.setDate(reminderDate.getDate() - 1);
             reminderDate.setHours(17, 0, 0, 0); // 5 PM day before
 
-            const title = `🗑️ ${collection.type}`;
-            const description = `Tomorrow is your ${collection.type} collection day in Swindon. Don't forget to put your bins out!`;
-            const location = 'Swindon, UK';
+            const now = new Date();
+            const timeUntilReminder = reminderDate.getTime() - now.getTime();
 
-            const formatGoogleDate = (date) => {
-                return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-            };
-
-            const startDate = formatGoogleDate(reminderDate);
-            const endDate = formatGoogleDate(new Date(reminderDate.getTime() + 60*60*1000));
-
-            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startDate}/${endDate}&details=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}`;
-
-            window.open(url, '_blank');
+            if (timeUntilReminder > 0 && timeUntilReminder < 24 * 60 * 60 * 1000) {
+                setTimeout(() => {
+                    if (Notification.permission === 'granted') {
+                        new Notification(`🗑️ ${collection.type}`, {
+                            body: `Tomorrow is your ${collection.type} collection day. Don't forget to put your bins out!`,
+                            icon: '/icons/icon-192x192.png',
+                            badge: '/icons/icon-192x192.png',
+                            tag: `collection-${collection.date}`,
+                            requireInteraction: true
+                        });
+                    }
+                }, timeUntilReminder);
+            }
         }
 
-        // Download ICS for single collection
-        function downloadSingleICS(collection, type) {
-            const collectionDate = new Date(collection.date);
-            const reminderDate = new Date(collectionDate);
-            reminderDate.setDate(reminderDate.getDate() - 1);
-            reminderDate.setHours(17, 0, 0, 0); // 5 PM day before
 
-            const title = `🗑️ ${collection.type}`;
-            const description = `Tomorrow is your ${collection.type} collection day in Swindon. Don't forget to put your bins out!`;
-            const location = 'Swindon, UK';
 
-            const formatICSDate = (date) => {
-                return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-            };
 
-            const ics = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Swindon Waste Collections//EN
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-BEGIN:VEVENT
-UID:${collection.date}-${collection.type.replace(/\s/g, '-')}@swindon-waste.app
-DTSTAMP:${formatICSDate(new Date())}
-DTSTART:${formatICSDate(reminderDate)}
-DTEND:${formatICSDate(new Date(reminderDate.getTime() + 60*60*1000))}
-SUMMARY:${title}
-DESCRIPTION:${description}
-LOCATION:${location}
-STATUS:CONFIRMED
-SEQUENCE:0
-BEGIN:VALARM
-TRIGGER:-PT0M
-DESCRIPTION:${description}
-ACTION:DISPLAY
-END:VALARM
-END:VEVENT
-END:VCALENDAR`;
-
-            const blob = new Blob([ics], { type: 'text/calendar' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${collection.type.replace(/\s/g, '-')}-${collection.date}.ics`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
 
         // Initialize
         updateSteps(1);
     </script>
 
-    <!-- Calendar Selection Modal -->
-    <div id="calendarModal" class="calendar-modal" onclick="closeCalendarModal(event)">
-        <div class="calendar-modal-content" onclick="event.stopPropagation()">
-            <h3>Add to Calendar</h3>
-            <div class="calendar-options">
-                <button class="calendar-option-btn" onclick="selectCalendar('google')">
-                    <span class="icon">📅</span>
-                    <span>Google Calendar</span>
-                </button>
-                <button class="calendar-option-btn" onclick="selectCalendar('apple')">
-                    <span class="icon">🍎</span>
-                    <span>Apple Calendar</span>
-                </button>
-                <button class="calendar-option-btn" onclick="selectCalendar('outlook')">
-                    <span class="icon">📧</span>
-                    <span>Outlook Calendar</span>
-                </button>
-            </div>
-            <button class="modal-close" onclick="closeCalendarModal()">Cancel</button>
-        </div>
-    </div>
+
 </body>
 </html>
 
